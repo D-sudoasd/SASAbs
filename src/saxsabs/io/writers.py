@@ -40,6 +40,8 @@ _OPERATOR_PROVENANCE_KEYS = (
     "corrections_applied",
     "do_not_repeat",
     "intensity_unit",
+    "thickness_cm",
+    "thickness_source",
     "buffer_source_name",
     "buffer_source_sha256",
     "buffer_alpha",

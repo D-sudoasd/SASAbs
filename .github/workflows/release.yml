@@ -19,9 +19,26 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -e .[dev]
+          pip install -e .[dev,gui,bl19b2,hdf5]
+      - name: Verify tag and package version
+        run: |
+          python - <<'PY'
+          import os
+          import tomllib
+          from pathlib import Path
+
+          version = tomllib.loads(
+              Path("pyproject.toml").read_text(encoding="utf-8")
+          )["project"]["version"]
+          expected_tag = f"v{version}"
+          actual_tag = os.environ["GITHUB_REF_NAME"]
+          if actual_tag != expected_tag:
+              raise SystemExit(
+                  f"release tag {actual_tag!r} does not match {expected_tag!r}"
+              )
+          PY
       - name: Ruff
-        run: ruff check src tests
+        run: ruff check SASAbs.py saxs_mpl_style.py src tests paper/*.py scripts/*.py
       - name: Pytest
         run: pytest -q --tb=short
 
@@ -36,8 +53,50 @@ jobs:
       - name: Build distributions
         run: |
           python -m pip install --upgrade pip
-          python -m pip install build
+          python -m pip install build twine
           python -m build
+          python -m twine check dist/*
+      - name: Clean-install wheel and run smoke checks
+        run: |
+          python -m venv .release-smoke
+          .release-smoke/bin/python -m pip install --upgrade pip
+          wheel="$(find dist -maxdepth 1 -name '*.whl' -print -quit)"
+          test -n "$wheel"
+          .release-smoke/bin/python -m pip install "${wheel}[gui,bl19b2,hdf5]"
+          smoke_dir="$(mktemp -d)"
+          cp examples/minimal_2d/run_minimal_2d_pipeline.py "$smoke_dir/"
+          cp examples/minimal_2d/synthetic_detector_image.csv "$smoke_dir/"
+          cp examples/minimal_2d/synthetic_geometry.json "$smoke_dir/"
+          smoke_python="$PWD/.release-smoke/bin/python"
+          smoke_cli="$PWD/.release-smoke/bin/saxsabs"
+          (
+          cd "$smoke_dir"
+          "$smoke_cli" --version
+          "$smoke_python" - <<'PY'
+          from pathlib import Path
+
+          import SASAbs
+          import saxs_mpl_style
+          import saxsabs
+
+          presets = saxs_mpl_style.preset_choices()
+          if len(presets) != 5:
+              raise SystemExit(
+                  f"expected five Workbench plot presets, got {presets!r}"
+              )
+          if SASAbs.saxs_mpl_style is not saxs_mpl_style:
+              raise SystemExit(
+                  "Workbench did not load the packaged plot-style module"
+              )
+          for module in (SASAbs, saxs_mpl_style, saxsabs):
+              module_path = Path(module.__file__).resolve()
+              if "site-packages" not in module_path.parts:
+                  raise SystemExit(
+                      f"expected installed wheel module, got {module_path}"
+                  )
+          PY
+          "$smoke_python" run_minimal_2d_pipeline.py --output-dir outputs
+          )
       - uses: actions/upload-artifact@v7
         with:
           name: dist
@@ -48,6 +107,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
       - uses: actions/download-artifact@v8
         with:
           name: dist
@@ -65,9 +128,9 @@ jobs:
 
           doi_url = f"https://doi.org/{match.group(1)}"
           Path("release-body.md").write_text(
-              "Archived release DOI: "
+              "Project DOI: "
               f"{doi_url}\n\n"
-              "Use this DOI when citing this specific software release.\n",
+              "Use the project DOI for general citation. A release-specific DOI is available only after Zenodo archives that release.\n",
               encoding="utf-8",
           )
           PY

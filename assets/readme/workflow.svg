@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="220" viewBox="0 0 1200 220" role="img" aria-labelledby="title desc">
+  <title id="title">Four entry points, one traceable result</title>
+  <desc id="desc">CLI utilities, desktop Workbench, strict BL19B2 runner, and Python API converge on shared scientific and I/O modules.</desc>
+  <rect width="1200" height="220" rx="24" fill="#0B1118"/>
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+    <text x="52" y="47" fill="#8FA3B5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18" letter-spacing="2">CHOOSE AN ENTRY POINT</text>
+    <g font-size="21" font-weight="650" text-anchor="middle">
+      <rect x="52" y="72" width="205" height="62" rx="10" fill="#13202B" stroke="#4B6478"/>
+      <text x="154" y="110" fill="#F4F7FA">CLI utilities</text>
+      <rect x="280" y="72" width="205" height="62" rx="10" fill="#13202B" stroke="#4B6478"/>
+      <text x="382" y="110" fill="#F4F7FA">Workbench</text>
+      <rect x="508" y="72" width="205" height="62" rx="10" fill="#13202B" stroke="#4B6478"/>
+      <text x="610" y="110" fill="#F4F7FA">BL19B2 runner</text>
+      <rect x="736" y="72" width="170" height="62" rx="10" fill="#13202B" stroke="#4B6478"/>
+      <text x="821" y="110" fill="#F4F7FA">Python API</text>
+    </g>
+    <path d="M155 134V166H938M383 134V166M611 134V166M821 134V166" fill="none" stroke="#5B7083" stroke-width="2.5"/>
+    <path d="M926 157L940 166L926 175" fill="none" stroke="#5B7083" stroke-width="2.5"/>
+    <rect x="956" y="70" width="192" height="98" rx="12" fill="#14251F" stroke="#69C0A5"/>
+    <text x="1052" y="107" text-anchor="middle" fill="#F4F7FA" font-size="23" font-weight="700">absolute output</text>
+    <text x="1052" y="137" text-anchor="middle" fill="#9FB6A9" font-size="18">with provenance</text>
+    <text x="52" y="196" fill="#8FA3B5" font-size="18">Shared numerical and I/O modules where implemented</text>
+  </g>
+</svg>

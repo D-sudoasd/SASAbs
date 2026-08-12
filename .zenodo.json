@@ -1,6 +1,6 @@
 {
   "title": "saxsabs: A Robust Workflow for Small-Angle X-ray Scattering Absolute Intensity Calibration",
-  "description": "SAXS absolute intensity calibration and robust 1D profile utilities",
+  "description": "Traceable SAXS absolute-intensity calibration and profile I/O",
   "upload_type": "software",
   "license": "BSD-3-Clause",
   "version": "2.0.0",
@@ -23,7 +23,12 @@
   "related_identifiers": [
     {
       "relation": "isSupplementTo",
-      "identifier": "https://github.com/D-sudoasd/SASAbs_saxs-absolute-calibration"
+      "identifier": "https://github.com/D-sudoasd/SASAbs"
+    },
+    {
+      "relation": "isVersionOf",
+      "identifier": "10.5281/zenodo.19687103",
+      "scheme": "doi"
     }
   ]
 }

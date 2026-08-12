@@ -1,3 +1,4 @@
+import csv
 import json
 import math
 from pathlib import Path
@@ -2814,7 +2815,6 @@ def test_include_manifest_filters_before_classification_and_preserves_order(
     ('manifest_text', 'error_match'),
     [
         ('wrong\nfolder/frame.tif\n', 'relative_path column'),
-        ('relative_path\n../frame.tif\n', 'safe relative path'),
         ('relative_path\nC:/frame.tif\n', 'must be relative'),
         ('relative_path\n\\\\server\\share\\frame.tif\n', 'must be relative'),
         ('relative_path\n/frame.tif\n', 'must be relative'),
@@ -2833,6 +2833,17 @@ def test_include_manifest_rejects_unsafe_or_duplicate_entries(
     frame.write_bytes(b'tiff')
 
     with pytest.raises((ValueError, FileNotFoundError), match=error_match):
+        bl19b2._load_include_manifest(config)
+
+
+def test_include_manifest_rejects_parent_traversal_entry(tmp_path: Path):
+    config = _manifest_test_config(tmp_path, 'relative_path\nframe.tif\n')
+    with config.include_manifest_path.open('w', newline='', encoding='utf-8') as stream:
+        writer = csv.DictWriter(stream, fieldnames=['relative_path'])
+        writer.writeheader()
+        writer.writerow({'relative_path': '../frame.tif'})
+
+    with pytest.raises(ValueError, match='safe relative path'):
         bl19b2._load_include_manifest(config)
 
 

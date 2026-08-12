@@ -2,9 +2,10 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [main, joss-submission]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -27,7 +28,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .[dev,gui,bl19b2,hdf5]
       - name: Ruff
-        run: ruff check src tests
+        run: ruff check SASAbs.py saxs_mpl_style.py src tests paper/*.py scripts/*.py
       - name: Pytest
         run: pytest -q --tb=short
 

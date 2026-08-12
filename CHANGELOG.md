@@ -1,8 +1,27 @@
 # Changelog
 
-## [Unreleased]
+## [2.0.0] - Unreleased
+
+### Submission-candidate hardening (2026-08-12)
+
+- Require finite positive inherited `thickness_cm` and a non-empty
+  `thickness_source` before formal Tab 3 K-only scaling.
+- Preserve inherited thickness value and source across text, canSAS, and
+  NXcanSAS operator provenance.
+- Make Tab 3 write from the explicitly validated calibration context rather
+  than an implicit GUI cache.
+- Harden the JOSS decision gate against e-mail/citation confusion, missing
+  README anchors or images, mismatched commit evidence, dirty worktrees, and
+  concept-DOI/version-DOI conflation.
 
 ### Added
+- Added a JOSS manuscript, editable publication figures, an API reference,
+  maintainer-facing issue and pull-request templates, and a current JOSS
+  readiness checklist.
+- Added a fail-closed JOSS readiness command that checks submission date,
+  required sections, author placeholders, corresponding-author metadata,
+  citations, versions, README targets, branch state, and build/cache pollution;
+  strict mode also requires an evidence-backed author confirmation record.
 - Added a fingerprinted NIST 30 keV material-attenuation core with explicit wt%
   composition, ideal-mixture density, partial-uncertainty/porosity warnings,
   nominal Ti-24Nb-4Zr-8Sn, Ti-6Al-4V, and Zr-2.5Nb regression values, and JSON
@@ -23,6 +42,13 @@
   approval bound to a canonical configuration fingerprint.
 
 ### Changed
+- Expanded the installation, quick-start, scientific-boundary, citation, and
+  contributor documentation; synchronized repository URLs and the project-level
+  Zenodo concept DOI across package, citation, CodeMeta, and Zenodo metadata.
+- CI now runs on direct `joss-submission` pushes and supports manual dispatch;
+  lint coverage includes the submission-readiness script.
+- Moved historical submission drafts, audit reports, and local audit ledgers out
+  of the version-controlled submission branch.
 - Workbench formal Tab 2 is now fixed-thickness only. Per-frame Beer-Lambert
   and both Tab 2/Tab 3 existence-only resume controls are UI-disabled, BLOCKED
   by Dry Check if forced, and rejected again at Run. K and μ are read-only in
@@ -57,6 +83,16 @@
   common close-safe loader.
 
 ### Fixed
+- Deferred the TkAgg backend selection until the desktop Workbench is actually
+  constructed, allowing library imports after a headless Matplotlib backend has
+  already been selected on Linux and macOS.
+- Made the path-traversal regression fixture write its unsafe CSV field
+  independently of the host path separator.
+- Included the shared Workbench plotting-style module in wheel and source
+  distributions, and expanded source archives to include linked documentation,
+  examples, paper assets, and tests.
+- Declared PyYAML as a development dependency so the packaged beamtime-template
+  test runs instead of being skipped in a clean source-distribution environment.
 - Prevented project-owned absolute 1D profiles from silently receiving K or
   thickness a second time.
 - Preserved explicitly named all-NaN combined-standard uncertainty columns when
@@ -72,20 +108,18 @@
 ### Known limitations
 - Formal multi-folder/per-sample fixed-thickness campaign ownership remains in
   the strict CLI/batch path; Workbench and strict-runner kernels are not unified.
-- K-only requires an inherited thickness ledger marker but not yet its numeric
-  value/source.
+- K-only requires an inherited finite positive thickness value and a non-empty
+  source; imported profiles that predate this provenance contract must be
+  upgraded or processed through K/d with an explicit thickness.
 - Workbench has no atomic campaign publication or content-signature resume;
   unsafe existence-only resume remains disabled.
 - Transactional calibrated-2D publication is scoped to the reusable
   `saxsabs.io.calibrated2d` package; the strict BL19B2 runner still lacks atomic
   whole-campaign publication.
-- Repository hygiene remains open: roughly 79 MiB under `audit_outputs/` and
-  campaign-specific tests retain private `H:\...` path coupling and are not
-  portable default fixtures.
 
-## [2.0.0] - 2026-07-13
+### Development changes incorporated on 2026-07-13
 
-### Added
+#### Added
 - Explicit `bl19b2-abs2d-v1-legacy` migration command with acknowledgement flags for historical assumptions.
 - Calibration-record schema v2 binds and verifies portable standard, background, dark, reference, operator, integration, and robust-estimator sources used to derive K.
 - **Same-机时 (beamtime) automatic grouping** — new core `cluster_by_acquisition_time` + `AcquisitionGroup` in `saxsabs.core.session_grouper`. Tab2 now has a "检测机时分组 / Detect Groups" button that clusters files by timestamp (header preferred, mtime fallback) with a 90-minute default gap. Groups are exposed to the batch report path and can drive future per-run output subdirectories and smarter auto BG/Dark matching.
@@ -93,7 +127,7 @@
 - New public re-exports: `evaluate_preflight_gate`, `RunPolicy`, `build_reference_library`, `AcquisitionGroup`, `cluster_by_acquisition_time`, `extract_acquisition_timestamp`, etc.
 - Two new test modules: `test_session_grouper.py` and `test_reference_matching.py`.
 
-### Changed
+#### Changed
 - Promoted the BL19B2 workflow to an explicit safety-first CLI contract. Historical v1 assumptions require the dedicated legacy migration command and explicit acknowledgement.
 - Schema v1 calibration records remain readable but are provenance-incomplete and cannot authorize formal Tab 2/Tab 3 output.
 - Combined uncertainty remains explicitly partial while shared calibration-background raw-count and dark covariance are unquantified.
@@ -101,7 +135,7 @@
 - Tooltip system hardened (smarter screen-edge positioning, slightly better dark-mode contrast, safer error handling).
 - `parse_header` and `compute_norm_factor` in the Workbench now prefer the canonical core implementations (with legacy fallback for safety).
 
-### Fixed
+#### Fixed
 - Preserved public positional-call compatibility for calibration and buffer-subtraction APIs.
 - Made generated rerun commands preserve all scientific and execution options.
 - Hardened calibrated-2D and PONI resume checks against incomplete, corrupt, stale, or context-incompatible output packages; multi-file publication is transactional.
@@ -111,9 +145,6 @@
 - Added safe Cal2D rerun package IDs, bounded batch workers and output stems, and removed current-working-directory launcher shadowing.
 - Separated reference-certificate coverage from the final system uncertainty coverage contract.
 - Minor robustness improvements in header timestamp parsing for grouping use-case.
-
-### Release archive note
-- `submission/softwarex/` is retained as the historical 1.1.1 submission snapshot; it is not the authoritative 2.0.0 runtime metadata.
 
 ## [1.1.1] - 2026-04-22
 
@@ -205,7 +236,7 @@
 - Replaced placeholder repository URL in CITATION.cff with real GitHub URL.
 - Upgraded `paper.bib` with full DOI-bearing citations for pyFAI, SasView, Dioptas, and added irena, DAWN, BioXTAS RAW, SRM 3600, Glatter & Kratky references.
 - Strengthened State of the field section with concrete tool comparison table.
-- Enriched Research impact statement with real deployment context.
+- Expanded the Research impact statement with author-reported workflow context.
 - Expanded AI usage disclosure per JOSS 2025 policy.
 
 ### Removed

@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -8,10 +9,13 @@ def test_minimal_2d_example_uses_independent_raw_frame_golden(tmp_path: Path):
     repo = Path(__file__).resolve().parents[1]
     script = repo / "examples" / "minimal_2d" / "run_minimal_2d_pipeline.py"
     output = tmp_path / "outputs"
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo / "src")
 
     completed = subprocess.run(
         [sys.executable, str(script), "--output-dir", str(output)],
         cwd=repo,
+        env=env,
         text=True,
         capture_output=True,
         check=False,

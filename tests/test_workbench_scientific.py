@@ -1471,7 +1471,10 @@ def test_tab3_run_preloads_buffer_once_and_reports_provenance(tmp_path):
     module = _load_workbench_module()
     app = module.SAXSAbsWorkbenchApp.__new__(module.SAXSAbsWorkbenchApp)
     app.language = "en"
-    fingerprint = "a" * 64
+    poni = tmp_path / "geometry.poni"
+    poni.write_text("poni", encoding="utf-8")
+    context = _calibration_context(module, poni)
+    fingerprint = context.fingerprint()
 
     def write_profile(
         path,
@@ -1482,12 +1485,20 @@ def test_tab3_run_preloads_buffer_once_and_reports_provenance(tmp_path):
         corrections_applied,
         intensity_column,
         k_factor=None,
+        thickness_cm=None,
+        thickness_source=None,
     ):
         ledger = json.dumps(corrections_applied, separators=(",", ":"))
         k_line = "" if k_factor is None else f"# k_factor: {k_factor:.17g}\n"
+        thickness_lines = ""
+        if thickness_cm is not None:
+            thickness_lines += f"# thickness_cm: {thickness_cm:.17g}\n"
+        if thickness_source is not None:
+            thickness_lines += f"# thickness_source: {thickness_source}\n"
         path.write_text(
             f"# calibration_context_fingerprint: {fingerprint}\n"
             + k_line
+            + thickness_lines
             + f"# intensity_state: {intensity_state}\n"
             f"# intensity_unit: {intensity_unit}\n"
             f"# corrections_applied: {ledger}\n"
@@ -1509,6 +1520,8 @@ def test_tab3_run_preloads_buffer_once_and_reports_provenance(tmp_path):
         "intensity_unit": "relative",
         "corrections_applied": ["thickness"],
         "intensity_column": "I_rel",
+        "thickness_cm": 0.1,
+        "thickness_source": "upstream sample cell record",
     }
     write_profile(sample_a, (10.0, 9.0, 8.0), **sample_kwargs)
     write_profile(sample_b, (12.0, 11.0, 10.0), **sample_kwargs)
@@ -1544,7 +1557,6 @@ def test_tab3_run_preloads_buffer_once_and_reports_provenance(tmp_path):
     app.t3_prog_bar = {}
     app.root = SimpleNamespace(update_idletasks=lambda: None)
     app.get_monitor_mode = lambda: "rate"
-    context = SimpleNamespace(fingerprint=lambda: fingerprint)
     app.require_trusted_k_for_external = lambda *_args, **_kwargs: context
     app.log = lambda _message: None
     app.show_info = lambda *_args, **_kwargs: None
@@ -1603,6 +1615,11 @@ def test_tab3_run_preloads_buffer_once_and_reports_provenance(tmp_path):
         buffer_path
     )
     assert output_profile["operator_provenance"]["uncertainty_type"] == "combined_standard"
+    assert float(output_profile["operator_provenance"]["thickness_cm"]) == pytest.approx(0.1)
+    assert (
+        output_profile["operator_provenance"]["thickness_source"]
+        == "upstream sample cell record"
+    )
     output_table = __import__("pandas").read_csv(
         sample_output,
         sep="\t",
@@ -1935,12 +1952,42 @@ def test_tab3_requires_explicit_relative_intensity_state_before_scaling():
             "operator_provenance": {
                 "intensity_state": "relative",
                 "corrections_applied": '["thickness"]',
+                "thickness_cm": "0.1",
+                "thickness_source": "upstream sample cell record",
             },
         },
         "relative.dat",
         correction_mode="k_only",
     )
     assert assessment.state.value == "relative"
+
+    with pytest.raises(ValueError, match="positive thickness_cm provenance"):
+        app.require_relative_external_profile_for_scaling(
+            {
+                "i_col": "I_rel",
+                "operator_provenance": {
+                    "intensity_state": "relative",
+                    "corrections_applied": '["thickness"]',
+                    "thickness_source": "upstream sample cell record",
+                },
+            },
+            "missing-thickness-value.dat",
+            correction_mode="k_only",
+        )
+
+    with pytest.raises(ValueError, match="thickness_source provenance"):
+        app.require_relative_external_profile_for_scaling(
+            {
+                "i_col": "I_rel",
+                "operator_provenance": {
+                    "intensity_state": "relative",
+                    "corrections_applied": '["thickness"]',
+                    "thickness_cm": "0.1",
+                },
+            },
+            "missing-thickness-source.dat",
+            correction_mode="k_only",
+        )
 
     with pytest.raises(ValueError, match="missing required existing.*thickness"):
         app.require_relative_external_profile_for_scaling(

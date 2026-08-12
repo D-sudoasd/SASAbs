@@ -136,8 +136,10 @@ front end to the strict BL19B2 campaign runner.
    requires inherited `thickness` in `corrections_applied`. Confirm
    `do_not_repeat` is unioned for duplicate-operation protection but cannot prove
    that required thickness was physically applied; disagreement with
-   `corrections_applied` makes the profile ambiguous. Note the remaining limit:
-   K-only does not yet require inherited thickness value/source provenance.
+   `corrections_applied` makes the profile ambiguous. K-only must also reject
+   missing, non-finite, non-positive `thickness_cm` and missing/placeholder
+   `thickness_source`. Confirm that accepted text, canSAS, and NXcanSAS outputs
+   retain both values for downstream K-only use.
 8. Enable buffer subtraction with a compatible fixture. The buffer must be
    explicit `absolute_cm^-1`, unit `1/cm`, carry K+thickness in
    `corrections_applied`, have no existing `buffer` correction, carry an explicit
@@ -159,10 +161,10 @@ front end to the strict BL19B2 campaign runner.
    Negative, non-finite, or malformed values must fail closed. Temporarily make
    the shared core kernel unavailable and confirm formal subtraction fails closed
    rather than using a weaker fallback.
-9. Before packaging the repository, inspect `audit_outputs/` size and scan tests
-   for private drive roots such as `H:\...`. The current roughly 79 MiB campaign
-   audit tree and batch-specific path coupling are an open P1 boundary, not a
-   portable test-fixture design; do not claim release hygiene is complete.
+9. Before packaging the repository, confirm `git status` contains no audit
+   outputs, build caches, downloaded literature, or private drive roots. Keep
+   manual evidence outside the repository and use only anonymized, portable
+   fixtures for version-controlled examples and tests.
 
 ## Screenshot comparison method
 
@@ -181,16 +183,15 @@ each accepted before/after pair:
 - retain the session-local artifact inventory with the test log, but do not
   present it as a versioned release artifact or scientific-output provenance.
 
-## Open release gates
+## Known Workbench boundaries
 
-The following checks must remain marked incomplete until the corresponding code
-exists:
+These capabilities are outside the current Workbench support contract. They are
+not claimed by the README or paper; use the strict headless workflow where
+applicable:
 
 - formal multi-folder/per-sample fixed-thickness campaigns have a Workbench
   owner equivalent to the strict CLI/batch campaign;
 - Workbench and strict BL19B2 runner use one shared scientific kernel;
-- K-only requires inherited thickness numeric value and source, not just a
-  ledger marker;
 - Workbench output root has an owner manifest, atomic campaign publication, and
   content-signature resume (existence-only resume must remain disabled);
 - Workbench preflight binds critical file content hashes and persists explicit

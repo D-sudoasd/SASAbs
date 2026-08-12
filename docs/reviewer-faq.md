@@ -1,8 +1,11 @@
 # Reviewer FAQ
 
-## Why keep the legacy GUI file?
+## Why keep the root Workbench module?
 
-The legacy GUI reflects production beamline operations. Core logic is being incrementally extracted to avoid behavior drift while improving reproducibility.
+The root module is the maintained Tk desktop application and compatibility
+entry point. Reusable scientific and I/O logic lives under `src/saxsabs/`; the
+GUI remains separate because the current Workbench and strict BL19B2 campaign
+runner have intentionally different ownership boundaries.
 
 ## How can this be tested without GUI?
 

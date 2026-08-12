@@ -72,6 +72,8 @@ def test_save_figure_does_not_mutate_live_figure(tmp_path):
 def test_saxsabs_dynamic_load_finds_style_module_outside_repo_cwd(tmp_path, monkeypatch):
     pytest.importorskip("fabio")
     pytest.importorskip("pyFAI")
+    import matplotlib
+    import matplotlib.pyplot as pyplot
 
     repo_root = Path(__file__).resolve().parents[1]
     script_path = repo_root / "SASAbs.py"
@@ -79,6 +81,8 @@ def test_saxsabs_dynamic_load_finds_style_module_outside_repo_cwd(tmp_path, monk
     original_path = list(sys.path)
 
     try:
+        matplotlib.use("Agg", force=True)
+        assert pyplot.get_backend().lower() == "agg"
         monkeypatch.chdir(tmp_path)
         sys.path = [
             item
@@ -92,6 +96,7 @@ def test_saxsabs_dynamic_load_finds_style_module_outside_repo_cwd(tmp_path, monk
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
+        assert pyplot.get_backend().lower() == "agg"
         assert hasattr(module.saxs_mpl_style, "PRESET_LABELS")
         assert ("single_column", "Single-column figure") in list(
             module.saxs_mpl_style.preset_choices()

@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-`src/saxsabs/` contains the installable Python package. Core scientific logic lives in `src/saxsabs/core/`, file parsing and exporters in `src/saxsabs/io/`, and command-line wiring in `src/saxsabs/cli.py` plus `src/saxsabs/__main__.py`. Root-level `SASAbs.py`, `saxsabs_workbench.py`, `saxsabs_workbench.pyw`, and `Start_SAXSAbs_Workbench.bat` support the legacy/desktop workbench. Tests are in `tests/`. Example inputs and manual workflow checks are in `examples/`; architecture and reviewer documentation are in `docs/`; paper and submission assets are under `paper/` and `submission/`.
+`src/saxsabs/` contains the installable Python package. Core scientific logic lives in `src/saxsabs/core/`, file parsing and exporters in `src/saxsabs/io/`, and command-line wiring in `src/saxsabs/cli.py` plus `src/saxsabs/__main__.py`. Root-level `SASAbs.py`, `saxsabs_workbench.py`, `saxsabs_workbench.pyw`, and `Start_SAXSAbs_Workbench.bat` support the legacy/desktop workbench. Tests are in `tests/`. Example inputs and manual workflow checks are in `examples/`; architecture and reviewer documentation are in `docs/`; JOSS paper assets are under `paper/`.
 
 ## Build, Test, and Development Commands
 

@@ -71,7 +71,8 @@
 - Tab 3 raw correction is disabled. Formal K/Kd accepts only an explicitly
   reduced `relative` profile; `raw_counts`, `absolute_cm^-1`, and `ambiguous`
   states fail closed. K/d requires `d > 0`; K-only applies K without repeating
-  thickness and requires inherited thickness in `corrections_applied`. Tab 3
+  thickness and requires inherited thickness in `corrections_applied`, a finite
+  positive `thickness_cm`, and a non-empty `thickness_source`. Tab 3
   combines inherited corrections with the actual K, optional
   thickness, and optional buffer operations and records that set per frame;
   Tab 2 derives its ledger from the active detector context.
@@ -121,19 +122,15 @@
 - The desktop UI has screen-aware initial geometry and a `900 x 600` minimum,
   but it still has no cancellable background `JobController`; high-volume work
   can therefore occupy the Tk event thread.
-- Repository hygiene remains open at P1: about 79 MiB of `audit_outputs/` plus
-  campaign-specific acceptance tests retain private `H:\...` path coupling.
-  They are not portable package fixtures and must be separated, reduced and
-  anonymized, or explicitly gated as local-only acceptance assets before release.
 
 ## Design goals
 
-1. Preserve scientific behaviour from the production workflow.
+1. Preserve scientific behaviour from the existing BL19B2 workflow.
 2. Make core math independent from GUI toolkits.
 3. Enable CI validation and reviewer reproducibility.
 4. Support bilingual operation for international beamline user communities.
 
-## Migration status
+## Supported boundary and known limitations
 
 - **Implemented**: normalization, header parsing, external 1D parsing, robust K
   estimation, NIST 30 keV material core, Elam diagnostic calculator, 1D
@@ -141,13 +138,19 @@
   enforcement, disabled legacy/resume controls, exact K-only/Kd/buffer gates,
   absolute-buffer validation, provenance-aware scrollable μ UI, disabled Tab 3
   raw mode, screen-aware startup, strict BL19B2 workflows, standard writers,
-  bilingual GUI, CLI, CI, and paper assets.
-- **Still open (P0)**: keep formal multi-folder/per-sample fixed-thickness
-  campaigns in the strict CLI/batch owner until Workbench and strict-runner
-  kernels are unified; add Workbench campaign ownership, atomic publication,
-  and content-signature resume; require numeric inherited thickness and source
-  provenance for K-only formal output rather than only a ledger marker.
-- **Still open (P1)**: close every FabIO path through a common loader, add a
-  cancellable background JobController, persist explicit CAUTION acceptance,
-  complete the DPI/theme/language/accessibility matrix, and separate the large
-  private-path-coupled campaign audit assets from portable package fixtures.
+  bilingual GUI, CLI, CI, and paper assets. K-only formal scaling requires both
+  the inherited-thickness ledger entry and numeric/source provenance.
+- **Strict campaign ownership**: formal multi-folder and per-sample campaigns
+  remain owned by the strict CLI/batch runner. The Workbench is an interactive
+  interface and is not advertised as an equivalent campaign owner.
+- **Publication and resume**: reusable calibrated-2D packages are transactional,
+  but whole-campaign atomic publication and content-signature resume are not
+  implemented in the Workbench or strict runner. Existence-only Workbench resume
+  is disabled rather than treated as safe.
+- **Desktop operation**: long GUI jobs run on the Tk event thread and are not
+  cancellable. Users should prefer headless workflows for unattended or large
+  campaigns. `CAUTION` remains visible but is not separately persisted as an
+  acknowledgement.
+- **Input resources**: not every Workbench FabIO path uses one common
+  copy-and-close helper. The strict readers exercised by the headless workflows
+  close their handles, and reviewers should use the documented portable fixtures.
