@@ -22,11 +22,10 @@ Updated: 15 August 2026 (Asia/Shanghai)
 - Review PDF: three-pass LuaLaTeX build, 5 pages, 698,183 bytes; all five pages
   rendered at 150 dpi and visually checked. The 1280 x 900 GUI image is a real,
   reproducible full-window Workbench capture.
-- Public CI evidence: commit `017af509d04764829afb0bc0cfa01bc1faadeecb`
-  completed both the [push run](https://github.com/D-sudoasd/SASAbs/actions/runs/31888299270)
-  and [Draft-PR run](https://github.com/D-sudoasd/SASAbs/actions/runs/31888301831)
-  with 26/26 successful checks. Subsequent commits and the exact submitted HEAD
-  must be revalidated.
+- Public CI gate: immediately before submission, the exact submitted HEAD must
+  have green push and Draft-PR runs for the complete matrix. Immutable commit
+  IDs and run URLs belong in the dated external validation record rather than
+  this tracked file, because editing the evidence here creates a new HEAD.
 - External format checks: the deterministic example's canSAS1d XML validates
   against the official 1.1 XSD with zero errors. Its NXcanSAS HDF5 output passes
   punx 0.3.5 with bundled v2018.5 definitions (97 OK, 0 WARN, 0 ERROR); current

@@ -40,8 +40,9 @@ accessed 15 August 2026:
 - [x] `CITATION.cff` and `codemeta.json` identify the canonical repository
       without presenting the project concept DOI as an exact 2.0.0 archive.
       README, paper, and `.zenodo.json` label the concept DOI at project level.
-- [x] Public push and Draft-PR runs for candidate commit `017af50` completed
-      26/26 checks successfully. The exact submitted HEAD must also be green.
+- [ ] Immediately before submission, record green push and Draft-PR runs for
+      the exact submitted HEAD in the dated external validation record. Do not
+      embed a self-referential commit hash in this tracked checklist.
 
 ## Paper
 
