@@ -119,8 +119,10 @@ Elam database through `xraydb.mu_elam` [@elam2002; @xraydb]. Its fixed 30 keV
 material calculation uses a versioned NIST SRD 126 snapshot [@nist_srd126].
 Absolute 1D intensity is reported in cm$^{-1}$. CSV and TSV outputs are directly
 inspectable; the structured XML and HDF5 outputs follow the documented canSAS1d
-1.1 and NXcanSAS 1.1 layouts but have not yet been validated with an independent
-schema validator or third-party consumer.
+1.1 and NXcanSAS 1.1 layouts. The XML output validates against the official
+canSAS1d 1.1 XSD. NXcanSAS output passes `punx` 0.3.5 [@punx] with its bundled
+v2018.5 definitions, but current NeXus definitions and third-party consumers
+have not yet been verified.
 
 ![SAXSAbs Workbench in English, showing K-calibration inputs and the plotting area. The screenshot was captured from the current source tree and contains no beamline data.](fig_gui.png){#fig:gui width="100%"}
 

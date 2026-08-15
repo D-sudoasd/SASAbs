@@ -1,12 +1,12 @@
 # JOSS submission checklist
 
 This checklist follows the current JOSS author and reviewer documentation,
-accessed 12 August 2026:
+accessed 15 August 2026:
 
 - [Submission requirements](https://joss.readthedocs.io/en/latest/submitting.html)
 - [Paper format](https://joss.readthedocs.io/en/latest/paper.html)
 - [Review criteria](https://joss.readthedocs.io/en/latest/review_criteria.html)
-- [AI usage policy](https://joss.readthedocs.io/en/latest/policies.html)
+- [AI usage policy](https://joss.readthedocs.io/en/latest/submitting.html#ai-usage-policy)
 
 ## Pre-review screening gates
 
@@ -34,13 +34,14 @@ accessed 12 August 2026:
 - [x] Core API reference in `docs/api.md`.
 - [x] Architecture and scientific boundaries in `docs/architecture.md`.
 - [x] Automated tests and a configured Linux/Windows/macOS CI matrix for Python
-      3.10--3.13; the candidate branch still needs a public green run.
+      3.10--3.13.
 - [x] `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, bug/feature templates, and a PR
       template.
 - [x] `CITATION.cff` and `codemeta.json` identify the canonical repository
       without presenting the project concept DOI as an exact 2.0.0 archive.
       README, paper, and `.zenodo.json` label the concept DOI at project level.
-- [ ] The latest remote CI run is green after the JOSS branch is pushed.
+- [x] Public push and Draft-PR runs for candidate commit `017af50` completed
+      26/26 checks successfully. The exact submitted HEAD must also be green.
 
 ## Paper
 
@@ -57,8 +58,11 @@ accessed 12 August 2026:
       table and does not describe either as XCOM.
 - [x] The workflow figure has editable SVG/PDF sources and the GUI image is a
       window-scoped capture of the actual Workbench.
-- [ ] canSAS1d/NXcanSAS output has independent schema or third-party consumer
-      validation; current evidence is project-local round-trip testing only.
+- [x] canSAS1d XML from the deterministic example validates against the official
+      version 1.1 XSD with zero errors.
+- [ ] NXcanSAS HDF5 passes punx 0.3.5 with its bundled v2018.5 definitions, but
+      current NeXus definitions and a third-party application consumer remain
+      unverified because punx 0.3.5 cannot parse the current definition set.
 - [ ] The author confirms author order, affiliation, corresponding author,
       acknowledgements, funding, conflicts of interest, and contribution roles.
 - [ ] The author confirms the complete AI disclosure and human review statement.

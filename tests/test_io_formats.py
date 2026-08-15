@@ -1,5 +1,7 @@
 """Tests for canSAS XML and NXcanSAS HDF5 I/O round-trip."""
 
+import xml.etree.ElementTree as ET
+
 import numpy as np
 import pytest
 
@@ -57,6 +59,21 @@ class TestCanSAS1DXML:
         }
         out = write_cansas1d_xml(xml_path, q, i_abs, err, metadata=meta)
         assert out == xml_path
+
+    def test_write_includes_schema_required_notes(self, tmp_path):
+        q, i_abs, err = self._make_data(3)
+        xml_path = tmp_path / "schema-required-notes.xml"
+
+        write_cansas1d_xml(xml_path, q, i_abs, err)
+
+        namespace = {"cansas": "urn:cansas1d:1.1"}
+        root = ET.parse(xml_path).getroot()
+        entry = root.find("cansas:SASentry", namespace)
+        assert entry is not None
+        process = entry.find("cansas:SASprocess", namespace)
+        assert process is not None
+        assert process.find("cansas:SASprocessnote", namespace) is not None
+        assert entry.find("cansas:SASnote", namespace) is not None
 
     def test_inherited_thickness_provenance_roundtrip(self, tmp_path):
         q, i_abs, err = self._make_data(10)

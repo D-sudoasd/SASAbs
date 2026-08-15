@@ -1,7 +1,7 @@
 # Minimal anonymized 2D reproducibility package
 
-This folder provides a reviewer-friendly deterministic dataset and script for an
-independent synthetic raw-frame validation without proprietary beamline files.
+This folder provides a reviewer-friendly deterministic dataset and script for a
+synthetic raw-frame validation without proprietary beamline files.
 The expected standard and sample curves are defined before reduction; the
 reference is not calculated from the measured profile.
 

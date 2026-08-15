@@ -1,26 +1,42 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc">
-  <title id="title">From relative signal to traceable absolute intensity</title>
-  <desc id="desc">A compact SAXS calibration sequence connects detector data and reference intensity to a provenance-bearing absolute result.</desc>
-  <rect width="1200" height="300" rx="24" fill="#0B1118"/>
-  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-    <text x="56" y="55" fill="#8FA3B5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18" letter-spacing="2.2">THE CALIBRATION RECORD STAYS WITH THE RESULT</text>
-    <text x="56" y="115" fill="#F4F7FA" font-size="38" font-weight="700">relative signal</text>
-    <text x="478" y="115" fill="#F4F7FA" font-size="38" font-weight="700">reference K</text>
-    <text x="842" y="115" fill="#F4F7FA" font-size="38" font-weight="700">absolute I(q)</text>
-    <path d="M284 100H430" stroke="#5B7083" stroke-width="3"/>
-    <path d="M418 91L432 100L418 109" fill="none" stroke="#5B7083" stroke-width="3"/>
-    <path d="M694 100H794" stroke="#5B7083" stroke-width="3"/>
-    <path d="M782 91L796 100L782 109" fill="none" stroke="#5B7083" stroke-width="3"/>
-    <g transform="translate(56 156)">
-      <path d="M0 61H1080" stroke="#293743"/>
-      <path d="M4 44C34 40 60 36 88 27C118 18 145 13 180 9" fill="none" stroke="#62B0E8" stroke-width="4"/>
-      <circle cx="4" cy="44" r="4" fill="#62B0E8"/><circle cx="88" cy="27" r="4" fill="#62B0E8"/><circle cx="180" cy="9" r="4" fill="#62B0E8"/>
-      <rect x="426" y="2" width="212" height="50" rx="8" fill="#131F2A" stroke="#F0A04B"/>
-      <text x="532" y="34" text-anchor="middle" fill="#F4F7FA" font-size="21" font-weight="650">robust estimate</text>
-      <path d="M790 43C820 39 847 33 876 24C908 15 936 10 972 7" fill="none" stroke="#69C0A5" stroke-width="4"/>
-      <text x="0" y="94" fill="#8FA3B5" font-size="18">detector + metadata</text>
-      <text x="426" y="94" fill="#8FA3B5" font-size="18">reference + diagnostics</text>
-      <text x="790" y="94" fill="#8FA3B5" font-size="18">value + units + provenance</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">SASAbs traceable absolute-intensity calibration</title>
+  <desc id="desc">Detector signal and reference intensity pass through robust K-factor estimation to an absolute SAXS profile with units and provenance.</desc>
+  <rect width="1200" height="360" rx="22" fill="#071218"/>
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+    <g transform="translate(58 48)">
+      <text x="0" y="0" fill="#86A0B2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18" letter-spacing="2.4">SAXS ABSOLUTE-INTENSITY CALIBRATION</text>
+      <text x="0" y="72" fill="#F5F7F8" font-size="46" font-weight="720">A calibration record</text>
+      <text x="0" y="126" fill="#F5F7F8" font-size="46" font-weight="720">you can inspect.</text>
+      <text x="0" y="176" fill="#B9C6CF" font-size="22">Robust K estimation, explicit intensity states,</text>
+      <text x="0" y="208" fill="#B9C6CF" font-size="22">portable outputs, and reviewable provenance.</text>
+      <path d="M0 250H520" stroke="#2A3A45"/>
+      <text x="0" y="282" fill="#86A0B2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18">CLI  ·  PYTHON API  ·  DESKTOP WORKBENCH</text>
+    </g>
+
+    <g transform="translate(650 42)">
+      <path d="M0 0H492M0 276H492" stroke="#2A3A45"/>
+      <text x="0" y="26" fill="#86A0B2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18" letter-spacing="1.6">CALIBRATION PATH</text>
+
+      <g transform="translate(0 55)">
+        <path d="M0 122H492M0 16V122" stroke="#2A3A45" stroke-width="1.5"/>
+        <path d="M8 96C49 88 83 76 117 60C154 43 190 36 230 31C271 26 311 23 350 21C394 18 434 16 484 13" fill="none" stroke="#D38A3B" stroke-width="4"/>
+        <path d="M8 103C47 91 82 80 117 63C153 47 191 39 231 34C270 29 310 26 350 23C393 20 434 18 484 16" fill="none" stroke="#5CA7D1" stroke-width="3" stroke-dasharray="7 7"/>
+        <circle cx="58" cy="85" r="4" fill="#5CA7D1"/><circle cx="117" cy="63" r="4" fill="#5CA7D1"/><circle cx="191" cy="39" r="4" fill="#5CA7D1"/><circle cx="270" cy="29" r="4" fill="#5CA7D1"/><circle cx="350" cy="23" r="4" fill="#5CA7D1"/><circle cx="434" cy="18" r="4" fill="#5CA7D1"/>
+        <text x="0" y="151" fill="#86A0B2" font-size="18">detector signal</text>
+        <text x="365" y="151" fill="#86A0B2" font-size="18">reference I(q)</text>
+      </g>
+
+      <g transform="translate(0 231)">
+        <circle cx="10" cy="4" r="5" fill="#5CA7D1"/>
+        <text x="26" y="11" fill="#F5F7F8" font-size="20" font-weight="650">robust K</text>
+        <path d="M122 4H170" stroke="#506473" stroke-width="2"/>
+        <path d="M160 -3L171 4L160 11" fill="none" stroke="#506473" stroke-width="2"/>
+        <text x="190" y="11" fill="#F5F7F8" font-size="20" font-weight="650">absolute I(q)</text>
+        <path d="M318 4H358" stroke="#506473" stroke-width="2"/>
+        <path d="M348 -3L359 4L348 11" fill="none" stroke="#506473" stroke-width="2"/>
+        <circle cx="379" cy="4" r="5" fill="#69B594"/>
+        <text x="395" y="11" fill="#F5F7F8" font-size="20" font-weight="650">provenance</text>
+      </g>
     </g>
   </g>
 </svg>

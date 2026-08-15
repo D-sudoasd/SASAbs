@@ -13,6 +13,12 @@
 - Harden the JOSS decision gate against e-mail/citation confusion, missing
   README anchors or images, mismatched commit evidence, dirty worktrees, and
   concept-DOI/version-DOI conflation.
+- Make canSAS1d XML exports satisfy the official version 1.1 XSD by emitting
+  required `SASprocessnote` and entry-level `SASnote` elements; record bounded
+  external validation for canSAS1d and NXcanSAS without overstating current
+  NeXus-definition or third-party-consumer coverage.
+- Build GitHub Release notes from the Concept DOI in `pyproject.toml` instead of
+  assuming that `CITATION.cff` already contains a release DOI.
 
 ### Added
 - Added a JOSS manuscript, editable publication figures, an API reference,

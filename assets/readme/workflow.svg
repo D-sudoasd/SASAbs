@@ -1,24 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="220" viewBox="0 0 1200 220" role="img" aria-labelledby="title desc">
-  <title id="title">Four entry points, one traceable result</title>
-  <desc id="desc">CLI utilities, desktop Workbench, strict BL19B2 runner, and Python API converge on shared scientific and I/O modules.</desc>
-  <rect width="1200" height="220" rx="24" fill="#0B1118"/>
-  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-    <text x="52" y="47" fill="#8FA3B5" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18" letter-spacing="2">CHOOSE AN ENTRY POINT</text>
-    <g font-size="21" font-weight="650" text-anchor="middle">
-      <rect x="52" y="72" width="205" height="62" rx="10" fill="#13202B" stroke="#4B6478"/>
-      <text x="154" y="110" fill="#F4F7FA">CLI utilities</text>
-      <rect x="280" y="72" width="205" height="62" rx="10" fill="#13202B" stroke="#4B6478"/>
-      <text x="382" y="110" fill="#F4F7FA">Workbench</text>
-      <rect x="508" y="72" width="205" height="62" rx="10" fill="#13202B" stroke="#4B6478"/>
-      <text x="610" y="110" fill="#F4F7FA">BL19B2 runner</text>
-      <rect x="736" y="72" width="170" height="62" rx="10" fill="#13202B" stroke="#4B6478"/>
-      <text x="821" y="110" fill="#F4F7FA">Python API</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="250" viewBox="0 0 1200 250" role="img" aria-labelledby="title desc">
+  <title id="title">SASAbs entry points and shared processing core</title>
+  <desc id="desc">CLI utilities, desktop Workbench, strict BL19B2 runner, and Python API connect to shared scientific and input-output modules before producing reviewable absolute-intensity outputs.</desc>
+  <rect width="1200" height="250" rx="22" fill="#071218"/>
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+    <text x="54" y="42" fill="#86A0B2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18" letter-spacing="2">ENTRY POINTS</text>
+    <path d="M54 58H1146" stroke="#2A3A45"/>
+
+    <g fill="#F5F7F8" font-size="21" font-weight="650">
+      <text x="54" y="94">CLI utilities</text>
+      <text x="278" y="94">Workbench</text>
+      <text x="500" y="94">BL19B2 runner</text>
+      <text x="760" y="94">Python API</text>
     </g>
-    <path d="M155 134V166H938M383 134V166M611 134V166M821 134V166" fill="none" stroke="#5B7083" stroke-width="2.5"/>
-    <path d="M926 157L940 166L926 175" fill="none" stroke="#5B7083" stroke-width="2.5"/>
-    <rect x="956" y="70" width="192" height="98" rx="12" fill="#14251F" stroke="#69C0A5"/>
-    <text x="1052" y="107" text-anchor="middle" fill="#F4F7FA" font-size="23" font-weight="700">absolute output</text>
-    <text x="1052" y="137" text-anchor="middle" fill="#9FB6A9" font-size="18">with provenance</text>
-    <text x="52" y="196" fill="#8FA3B5" font-size="18">Shared numerical and I/O modules where implemented</text>
+    <g fill="#86A0B2" font-size="18">
+      <text x="54" y="122">focused commands</text>
+      <text x="278" y="122">interactive routes</text>
+      <text x="500" y="122">strict campaign path</text>
+      <text x="760" y="122">reusable functions</text>
+    </g>
+
+    <g stroke="#506473" stroke-width="2" fill="none">
+      <path d="M132 137V169H924"/>
+      <path d="M356 137V169"/>
+      <path d="M584 137V169"/>
+      <path d="M826 137V169"/>
+    </g>
+    <circle cx="132" cy="169" r="4" fill="#5CA7D1"/><circle cx="356" cy="169" r="4" fill="#5CA7D1"/><circle cx="584" cy="169" r="4" fill="#5CA7D1"/><circle cx="826" cy="169" r="4" fill="#5CA7D1"/>
+
+    <path d="M54 194H930" stroke="#5CA7D1" stroke-width="3"/>
+    <text x="54" y="226" fill="#B9C6CF" font-size="20">shared scientific core  ·  typed I/O  ·  provenance checks</text>
+    <path d="M930 194H976" stroke="#506473" stroke-width="2.5"/>
+    <path d="M965 186L978 194L965 202" fill="none" stroke="#506473" stroke-width="2.5"/>
+
+    <rect x="992" y="151" width="154" height="86" rx="10" fill="#10241D" stroke="#69B594"/>
+    <text x="1069" y="184" text-anchor="middle" fill="#86A0B2" font-size="18">reviewable</text>
+    <text x="1069" y="214" text-anchor="middle" fill="#F5F7F8" font-size="21" font-weight="700">absolute output</text>
   </g>
 </svg>

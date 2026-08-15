@@ -4,12 +4,12 @@ Updated: 15 August 2026 (Asia/Shanghai)
 
 ## Locally verified
 
-- Source suite: 696 passed on Python 3.13.
+- Source suite: 699 passed in a fully provisioned Python 3.13 environment.
 - Ruff: root modules, package, tests, paper scripts, and submission gate pass.
 - README: 5 local images and all local links resolve; SVG/image audit passes.
 - Minimal 2D example: K and sample maximum relative errors are
   `0.001933697...`; CSV, TSV, XML, and HDF5 outputs are written.
-- Fresh-copy distribution build: 36-entry wheel and 140-entry sdist build from
+- Fresh-copy distribution build: 36-entry wheel and 142-entry sdist build from
   a source tree outside every Git checkout. The sdist includes README assets,
   workflows, docs, examples, tests, and paper sources.
 - Installed-wheel smoke: CLI reports `saxsabs 2.0.0`; `SASAbs`,
@@ -17,16 +17,20 @@ Updated: 15 August 2026 (Asia/Shanghai)
   copied minimal example passes outside the checkout. A fresh Python 3.13
   environment resolves the declared GUI/HDF5 extras with no broken
   requirements.
-- Paper: 1081-word body by the documented Pandoc method; 15 references; current
+- Paper: 1100-word body by the documented Pandoc method; 16 references; current
   Inara TeX and well-formed JATS resolve both figures.
-- Review PDF: three-pass LuaLaTeX build, 5 pages, 697,072 bytes; all five pages
-  rendered at 144 dpi and visually checked. The 1280 x 900 GUI image is a real,
+- Review PDF: three-pass LuaLaTeX build, 5 pages, 698,183 bytes; all five pages
+  rendered at 150 dpi and visually checked. The 1280 x 900 GUI image is a real,
   reproducible full-window Workbench capture.
-- Public CI: commit `58c82770d96ff3d702c252d4b113900439c33e19`
-  completed both the [push run](https://github.com/D-sudoasd/SASAbs/actions/runs/31887917615)
-  and [Draft-PR run](https://github.com/D-sudoasd/SASAbs/actions/runs/31887920199)
-  with 26/26 successful checks. The matrix covers Ubuntu, Windows, and macOS
-  with Python 3.10-3.13, plus the Inara paper build.
+- Public CI evidence: commit `017af509d04764829afb0bc0cfa01bc1faadeecb`
+  completed both the [push run](https://github.com/D-sudoasd/SASAbs/actions/runs/31888299270)
+  and [Draft-PR run](https://github.com/D-sudoasd/SASAbs/actions/runs/31888301831)
+  with 26/26 successful checks. Subsequent commits and the exact submitted HEAD
+  must be revalidated.
+- External format checks: the deterministic example's canSAS1d XML validates
+  against the official 1.1 XSD with zero errors. Its NXcanSAS HDF5 output passes
+  punx 0.3.5 with bundled v2018.5 definitions (97 OK, 0 WARN, 0 ERROR); current
+  NeXus definitions and third-party consumers remain unverified.
 
 ## Must be resolved before submission
 

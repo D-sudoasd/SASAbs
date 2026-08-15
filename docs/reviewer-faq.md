@@ -13,7 +13,7 @@ Core logic is exposed as importable APIs and CLI commands. Tests run headlessly 
 
 ## Data cannot be fully public. How is reproducibility addressed?
 
-The repository includes synthetic examples, an independent deterministic raw-frame
+The repository includes synthetic examples, a deterministic raw-frame
 validation package (`examples/minimal_2d/`), and automated tests. A manual
 verification checklist documents exact commands and expected acceptance ranges.
 
@@ -29,6 +29,16 @@ The script constructs independent dark, blank, SRM 3600, and sample frames,
 produces deterministic outputs (CSV/TSV/canSAS XML and optional NXcanSAS HDF5),
 and writes numerical K and sample-intensity errors to `summary.json`. This is a
 software golden test, not a substitute for measured beamline validation.
+
+## Have the structured exports been checked outside the project readers?
+
+Yes, with a bounded result. On 15 August 2026, the minimal example's XML output
+validated with zero errors against `cansas1d.xsd` from the official canSAS
+`1dwg` repository (blob `c376e590bf6c297ee5664834183b6d09b5684318`).
+The HDF5 output passed punx 0.3.5 against its bundled NeXus v2018.5 definitions
+with 97 OK, 0 WARN, and 0 ERROR findings. punx 0.3.5 could not parse the current
+NeXus `main` definitions (commit `6313522`), so the project does not claim
+validation against current definitions or a third-party application consumer.
 
 ## What is the software boundary?
 

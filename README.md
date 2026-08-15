@@ -6,6 +6,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/D-sudoasd/SASAbs/actions/workflows/ci.yml"><img src="https://github.com/D-sudoasd/SASAbs/actions/workflows/ci.yml/badge.svg" alt="Continuous integration status"></a>
   <a href="https://doi.org/10.5281/zenodo.19687103"><img src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.19687103-168AAD" alt="Zenodo concept DOI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-4C566A" alt="BSD-3-Clause license"></a>
   <img src="https://img.shields.io/badge/python-3.10%2B-3776AB" alt="Python 3.10 or later">
@@ -15,11 +16,9 @@
   <img src="assets/readme/hero.svg" width="100%" alt="Measured SAXS intensity is calibrated against a reference and exported with provenance.">
 </p>
 
-The `saxsabs` package turns calibrated standards, detector data, and physical
-metadata into absolute SAXS intensity while keeping the processing record
-visible. It combines robust K-factor estimation, explicit intensity states,
-reusable data writers, and reviewable provenance checks in one open-source
-project.
+`saxsabs` combines robust K-factor estimation, explicit intensity states,
+reusable data writers, and provenance checks. The result and the processing
+record remain reviewable together.
 
 <p align="center">
   <a href="#quick-start"><strong>Quick start</strong></a> ·
@@ -111,8 +110,9 @@ is not presented as equivalent to the stricter BL19B2 campaign runner.
 </p>
 
 The desktop interface exposes K-factor calibration, 2D batch processing,
-external-1D scaling, and built-in help. The image above is a reproducible capture
-of the English interface from the current source tree.
+external-1D scaling, and built-in help. The image above was captured from the
+English interface in the current source tree; it is interface documentation,
+not experimental evidence.
 
 ## Reproducible example
 
@@ -130,7 +130,7 @@ installed. The acceptance summary requires `k_relative_error < 0.005` and
 and expected files.
 
 <p align="center">
-  <img src="assets/readme/kfactor-demo.png" width="100%" alt="Deterministic synthetic K-factor example showing retained and rejected ratios.">
+  <img src="assets/readme/kfactor-demo.png" width="92%" alt="Deterministic synthetic K-factor example showing retained and rejected ratios.">
 </p>
 
 > This example checks software arithmetic and generated file content. It is not
@@ -151,9 +151,10 @@ and expected files.
 
 Absolute calibration depends on a suitable reference, detector geometry,
 monitor semantics, transmission, thickness, and instrument-specific provenance.
-The strict 2D workflow currently targets BL19B2 conventions. canSAS and NXcanSAS
-support is covered by project-local round-trip tests, not yet by an independent
-schema validator or third-party consumer test.
+The strict 2D workflow currently targets BL19B2 conventions. canSAS1d output is
+checked against the official version 1.1 XSD. NXcanSAS output passes project-local
+round-trip tests and punx 0.3.5 with its bundled v2018.5 definitions; current
+NeXus definitions and third-party consumers have not yet been verified.
 
 ## Development
 

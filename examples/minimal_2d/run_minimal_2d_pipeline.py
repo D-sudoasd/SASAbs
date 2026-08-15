@@ -187,11 +187,11 @@ def run_pipeline(output_dir: Path) -> dict[str, object]:
     )
 
     output_meta = {
-        "title": "saxsabs independent synthetic raw-frame validation",
+        "title": "saxsabs deterministic synthetic raw-frame validation",
         "run": "minimal-2d-golden-001",
         "wavelength_A": float(geometry["wavelength_A"]),
         "sdd_m": float(geometry["distance_m"]),
-        "sample_name": "synthetic-independent-golden",
+        "sample_name": "synthetic-deterministic-golden",
         "instrument_name": "synthetic-detector",
         "detector_name": "synthetic-array",
         "process_name": "minimal_2d_pipeline",
@@ -218,7 +218,7 @@ def run_pipeline(output_dir: Path) -> dict[str, object]:
         pass
 
     summary: dict[str, object] = {
-        "validation_type": "independent_synthetic_raw_frames",
+        "validation_type": "deterministic_synthetic_raw_frames",
         "points": int(q.size),
         "q_min": float(q.min()),
         "q_max": float(q.max()),

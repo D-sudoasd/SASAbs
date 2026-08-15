@@ -55,7 +55,7 @@ cannot be fully public.
 
    Expected: `k_factor` close to `2.0`, with non-zero `points_used`.
 
-7. Verify the independent synthetic raw-frame → absolute intensity workflow:
+7. Verify the deterministic synthetic raw-frame → absolute intensity workflow:
 
    ```bash
    python examples/minimal_2d/run_minimal_2d_pipeline.py
@@ -63,7 +63,7 @@ cannot be fully public.
 
    Expected outputs in `examples/minimal_2d/outputs/`:
 
-   - `summary.json` reports `validation_type=independent_synthetic_raw_frames`
+   - `summary.json` reports `validation_type=deterministic_synthetic_raw_frames`
    - `k_relative_error < 0.005`
    - `sample_max_relative_error < 0.01`
    - `absolute_profile.csv`, `absolute_profile.tsv`, `absolute_profile.xml` exist
