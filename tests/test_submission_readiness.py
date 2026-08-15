@@ -1,9 +1,25 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 
-from scripts import check_submission_readiness as readiness
+
+def _load_readiness_checker():
+    script = (
+        Path(__file__).resolve().parents[1]
+        / "scripts"
+        / "check_submission_readiness.py"
+    )
+    spec = importlib.util.spec_from_file_location("check_submission_readiness", script)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load submission readiness checker from {script}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+readiness = _load_readiness_checker()
 
 
 def _write(path: Path, text: str = "present") -> None:
