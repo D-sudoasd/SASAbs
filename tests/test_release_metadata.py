@@ -1,16 +1,27 @@
 from __future__ import annotations
 
 from datetime import date
+import importlib.util
 import json
 from pathlib import Path
 
 import pytest
 
-from scripts.validate_release_metadata import (
-    FINAL_RELEASE_MESSAGE,
-    ReleaseMetadataError,
-    validate_release_metadata,
-)
+
+def _load_release_validator():
+    script = Path(__file__).resolve().parents[1] / "scripts" / "validate_release_metadata.py"
+    spec = importlib.util.spec_from_file_location("validate_release_metadata", script)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load release metadata validator from {script}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+validator = _load_release_validator()
+FINAL_RELEASE_MESSAGE = validator.FINAL_RELEASE_MESSAGE
+ReleaseMetadataError = validator.ReleaseMetadataError
+validate_release_metadata = validator.validate_release_metadata
 
 
 TITLE = (
