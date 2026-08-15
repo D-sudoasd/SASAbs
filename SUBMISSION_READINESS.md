@@ -1,6 +1,6 @@
 # Submission readiness snapshot
 
-Updated: 12 August 2026 (Asia/Shanghai)
+Updated: 15 August 2026 (Asia/Shanghai)
 
 ## Locally verified
 
@@ -22,6 +22,11 @@ Updated: 12 August 2026 (Asia/Shanghai)
 - Review PDF: three-pass LuaLaTeX build, 5 pages, 697,072 bytes; all five pages
   rendered at 144 dpi and visually checked. The 1280 x 900 GUI image is a real,
   reproducible full-window Workbench capture.
+- Public CI: commit `58c82770d96ff3d702c252d4b113900439c33e19`
+  completed both the [push run](https://github.com/D-sudoasd/SASAbs/actions/runs/31887917615)
+  and [Draft-PR run](https://github.com/D-sudoasd/SASAbs/actions/runs/31887920199)
+  with 26/26 successful checks. The matrix covers Ubuntu, Windows, and macOS
+  with Python 3.10-3.13, plus the Inara paper build.
 
 ## Must be resolved before submission
 
@@ -36,10 +41,6 @@ Updated: 12 August 2026 (Asia/Shanghai)
    usage scope, and the author's final human-review assertion.
 5. Supply truthful funding, sponsor-role, acknowledgement, and competing-
    interest statements.
-6. Push the candidate branch and obtain a public green CI run before submission.
-   The CI workflow is configured for direct pushes to `joss-submission`, pull
-   requests targeting `main`, and manual dispatch.
-
 Run the strict decision gate with Pandoc available:
 
 ```bash
