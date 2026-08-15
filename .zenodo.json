@@ -1,5 +1,5 @@
 {
-  "title": "saxsabs: A Robust Workflow for Small-Angle X-ray Scattering Absolute Intensity Calibration",
+  "title": "saxsabs: Absolute-intensity calibration and provenance tracking for small-angle X-ray scattering",
   "description": "Traceable SAXS absolute-intensity calibration and profile I/O",
   "upload_type": "software",
   "license": "BSD-3-Clause",

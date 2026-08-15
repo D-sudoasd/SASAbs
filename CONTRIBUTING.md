@@ -42,6 +42,10 @@ reproducibility, and compatibility with supported optional dependencies.
 ## Release expectations
 
 Releases are created from version tags after the validation workflow succeeds.
+Before tagging, replace the `Unreleased` changelog heading with the ISO release
+date, add the same `date-released` to `CITATION.cff`, and set its message to
+`Cite the version-specific archive record for this release.` The release
+metadata validator rejects provisional or inconsistent values.
 Before describing a release-specific DOI in project metadata or release notes,
 ensure Zenodo has archived that release and assigned its DOI. The project-level
 concept DOI remains suitable for general project citation.

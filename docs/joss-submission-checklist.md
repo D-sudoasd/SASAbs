@@ -1,7 +1,7 @@
 # JOSS submission checklist
 
 This checklist follows the current JOSS author and reviewer documentation,
-accessed 15 August 2026:
+accessed 16 August 2026:
 
 - [Submission requirements](https://joss.readthedocs.io/en/latest/submitting.html)
 - [Paper format](https://joss.readthedocs.io/en/latest/paper.html)
@@ -12,7 +12,7 @@ accessed 15 August 2026:
 
 - [ ] **More than six months of public development.** GitHub reports that this
       repository was created on 25 February 2026. The date gate is therefore not
-      satisfied on 12 August 2026; 26 August 2026 is the first conservative
+      satisfied on 16 August 2026; 26 August 2026 is the first conservative
       submission date, provided public development remains active.
 - [ ] **Demonstrated research use.** The repository contains a concrete BL19B2
       workflow and reproducible synthetic validation material, but the author
@@ -43,6 +43,8 @@ accessed 15 August 2026:
 - [ ] Immediately before submission, record green push and Draft-PR runs for
       the exact submitted HEAD in the dated external validation record. Do not
       embed a self-referential commit hash in this tracked checklist.
+- [ ] Verify that the public repository description, homepage concept DOI,
+      visible README, and submitted branch identify the same candidate.
 
 ## Paper
 

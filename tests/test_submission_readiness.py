@@ -79,6 +79,7 @@ bibliography: paper.bib
         root / ".zenodo.json",
         json.dumps(
             {
+                "title": "Test paper",
                 "version": "2.0.0",
                 "related_identifiers": [
                     {"relation": "isSupplementTo", "identifier": canonical},
@@ -109,6 +110,7 @@ bibliography: paper.bib
         json.dumps(
             {
                 "public_history_confirmed": True,
+                "repository_identity_confirmed": True,
                 "research_use_confirmed": True,
                 "authorship_confirmed": True,
                 "ai_disclosure_confirmed": True,
@@ -156,7 +158,7 @@ def _mock_clean_git(monkeypatch):
     monkeypatch.setattr(readiness, "git_output", fake_git_output)
 
 
-def test_strict_gate_passes_with_complete_evidence_record(tmp_path, monkeypatch):
+def test_strict_gate_passes_with_complete_evidence_record(tmp_path, monkeypatch, capsys):
     confirmations = _minimal_ready_repository(tmp_path)
     monkeypatch.setattr(readiness, "ROOT", tmp_path)
     monkeypatch.setattr(readiness, "PAPER", tmp_path / "paper" / "paper.md")
@@ -174,6 +176,11 @@ def test_strict_gate_passes_with_complete_evidence_record(tmp_path, monkeypatch)
         ],
     )
 
+    monkeypatch.setattr(readiness, "current_date", lambda: readiness.date(2026, 8, 25))
+    assert readiness.main() == 1
+    assert "strict mode cannot use future submission date" in capsys.readouterr().out
+
+    monkeypatch.setattr(readiness, "current_date", lambda: readiness.date(2026, 8, 26))
     assert readiness.main() == 0
 
 
@@ -183,6 +190,7 @@ def test_strict_gate_rejects_missing_evidence_record(tmp_path, monkeypatch, caps
     monkeypatch.setattr(readiness, "PAPER", tmp_path / "paper" / "paper.md")
     monkeypatch.setattr(readiness, "paper_word_count", lambda: 900)
     _mock_clean_git(monkeypatch)
+    monkeypatch.setattr(readiness, "current_date", lambda: readiness.date(2026, 8, 26))
     monkeypatch.setattr(
         readiness.sys,
         "argv",
@@ -208,6 +216,7 @@ def test_strict_gate_rejects_dirty_or_mismatched_checkout(tmp_path, monkeypatch,
         return values.get(arguments)
 
     monkeypatch.setattr(readiness, "git_output", dirty_git_output)
+    monkeypatch.setattr(readiness, "current_date", lambda: readiness.date(2026, 8, 26))
     monkeypatch.setattr(
         readiness.sys,
         "argv",

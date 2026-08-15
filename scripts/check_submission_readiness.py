@@ -39,6 +39,7 @@ REQUIRED_SECTIONS = (
 
 MANUAL_GATES = (
     "Public history and iterative development still satisfy JOSS on the submission date.",
+    "The public repository identity and submitted branch match the confirmed candidate.",
     "A verifiable research-use case is included in the impact statement.",
     "Author list, order, corresponding author, affiliations, ORCIDs, and roles are confirmed.",
     "AI tools/models/versions, scope, and final human review are confirmed.",
@@ -49,6 +50,11 @@ MANUAL_GATES = (
 
 def read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def current_date() -> date:
+    """Return the runtime date; isolated for deterministic strict-gate tests."""
+    return date.today()
 
 
 def project_version() -> str:
@@ -177,6 +183,7 @@ def main() -> int:
         help="author-approved JSON record required by strict submission mode",
     )
     args = parser.parse_args()
+    runtime_date = current_date()
 
     failures: list[str] = []
     paper = read(PAPER)
@@ -193,6 +200,24 @@ def main() -> int:
             f"submission date {args.as_of.isoformat()} is before the conservative "
             f"eligibility date {EARLIEST_SUBMISSION_DATE.isoformat()}"
         )
+    if not args.allow_author_placeholders and args.as_of > runtime_date:
+        failures.append(
+            f"strict mode cannot use future submission date {args.as_of.isoformat()}; "
+            f"runtime date is {runtime_date.isoformat()}"
+        )
+
+    paper_title_match = re.search(r"(?m)^title:\s*(.+?)\s*$", front_matter)
+    if paper_title_match is None:
+        failures.append("paper front matter has no title")
+        paper_title = ""
+    else:
+        paper_title = paper_title_match.group(1).strip()
+        if (
+            len(paper_title) >= 2
+            and paper_title[0] == paper_title[-1]
+            and paper_title[0] in {"'", '"'}
+        ):
+            paper_title = paper_title[1:-1]
 
     paper_date_match = re.search(r"(?m)^date:\s*(.+?)\s*$", front_matter)
     if paper_date_match is None:
@@ -243,6 +268,7 @@ def main() -> int:
             else:
                 boolean_fields = (
                     "public_history_confirmed",
+                    "repository_identity_confirmed",
                     "research_use_confirmed",
                     "authorship_confirmed",
                     "ai_disclosure_confirmed",
@@ -339,6 +365,8 @@ def main() -> int:
     }
     if actual_relations != expected_relations:
         failures.append("Zenodo related identifiers do not match repository/concept DOI roles")
+    if paper_title and zenodo.get("title") != paper_title:
+        failures.append("Zenodo title does not match the JOSS paper title")
 
     changelog = read(ROOT / "CHANGELOG.md")
     if f"## [{version}] - Unreleased" not in changelog:

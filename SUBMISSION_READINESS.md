@@ -1,16 +1,18 @@
 # Submission readiness snapshot
 
-Updated: 15 August 2026 (Asia/Shanghai)
+Updated: 16 August 2026 (Asia/Shanghai)
 
 ## Locally verified
 
-- Source suite: 699 passed in a fully provisioned Python 3.13 environment.
+- Full source suite: PASS in a fully provisioned Python 3.13 environment; exact
+  count and duration are retained in the dated external validation record.
 - Ruff: root modules, package, tests, paper scripts, and submission gate pass.
 - README: 5 local images and all local links resolve; SVG/image audit passes.
 - Minimal 2D example: K and sample maximum relative errors are
   `0.001933697...`; CSV, TSV, XML, and HDF5 outputs are written.
-- Fresh-copy distribution build: 36-entry wheel and 142-entry sdist build from
-  a source tree outside every Git checkout. The sdist includes README assets,
+- Fresh-copy distribution build: wheel and sdist PASS from a source tree
+  outside every Git checkout. The exact archive inventory is retained in the
+  dated external validation record; the sdist includes README assets,
   workflows, docs, examples, tests, and paper sources.
 - Installed-wheel smoke: CLI reports `saxsabs 2.0.0`; `SASAbs`,
   `saxs_mpl_style`, and `saxsabs` import from the temporary environment; the
@@ -44,6 +46,9 @@ Updated: 15 August 2026 (Asia/Shanghai)
    usage scope, and the author's final human-review assertion.
 5. Supply truthful funding, sponsor-role, acknowledgement, and competing-
    interest statements.
+6. Before submission, verify that the public GitHub description, homepage
+   concept DOI, visible README, submitted branch, and green CI all identify the
+   exact candidate revision.
 Run the strict decision gate with Pandoc available:
 
 ```bash

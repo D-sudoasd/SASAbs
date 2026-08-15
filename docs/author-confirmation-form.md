@@ -74,6 +74,8 @@ Writing - original draft, and Writing - review & editing.
   completed from evidence, and passed with `--manual-confirmations`:
 - Public CI URL for the submitted revision:
 - Commit SHA submitted to JOSS:
+- Public repository description, homepage concept DOI, default branch or
+  submitted branch, and visible README all match that commit:
 - Confirmation date (`YYYY-MM-DD`, matching the paper submission date):
 - Research-evidence reference retained for editorial verification:
 - Confirmed commit is the current clean `joss-submission` HEAD:
