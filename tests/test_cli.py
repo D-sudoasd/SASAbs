@@ -161,11 +161,11 @@ def test_cli_estimate_k_accepts_explicit_column_overrides(
     meas = tmp_path / "meas.csv"
     ref = tmp_path / "ref.csv"
     meas.write_text(
-        "angle,counts\n0.01,17.1\n0.02,15.4\n0.05,13.4\n0.10,11.8\n",
+        "angle,I_meas\n0.01,17.1\n0.02,15.4\n0.05,13.4\n0.10,11.8\n",
         encoding="utf-8",
     )
     ref.write_text(
-        "q_ref,absolute\n0.01,34.2\n0.02,30.8\n0.05,26.8\n0.10,23.6\n",
+        "q_ref,I_ref\n0.01,34.2\n0.02,30.8\n0.05,26.8\n0.10,23.6\n",
         encoding="utf-8",
     )
 
@@ -182,11 +182,11 @@ def test_cli_estimate_k_accepts_explicit_column_overrides(
             "--q-col",
             "angle",
             "--i-col",
-            "counts",
+            "I_meas",
             "--ref-q-col",
             "q_ref",
             "--ref-i-col",
-            "absolute",
+            "I_ref",
             "--intensity-state",
             "relative",
         ],

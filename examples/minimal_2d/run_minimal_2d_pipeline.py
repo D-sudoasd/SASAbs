@@ -167,7 +167,10 @@ def run_pipeline(output_dir: Path) -> dict[str, object]:
         },
     }
     require_relative_input_for_absolute_scaling(
-        standard_profile, profile_name="minimal_2d standard"
+        standard_profile,
+        profile_name="minimal_2d standard",
+        corrections_to_apply=("k",),
+        required_existing_corrections=("thickness",),
     )
     k_result = estimate_k_factor_robust(
         q_meas=q,

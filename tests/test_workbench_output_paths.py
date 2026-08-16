@@ -8,7 +8,22 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from saxsabs.core.calibration_context import CalibrationContext
 from saxsabs.core.execution_policy import RunPolicy
+
+
+def _labeled_export_context():
+    return CalibrationContext(
+        formula_version="v3_nist_blank",
+        monitor_mode="rate",
+        poni_sha256="poni-sha",
+        mask_sha256=None,
+        flat_sha256=None,
+        correct_solid_angle=True,
+        polarization_factor=None,
+        standard_key="SRM3600",
+        standard_thickness_cm=0.1055,
+    )
 
 
 def _load_workbench_module():
@@ -73,6 +88,9 @@ def test_workbench_save_profile_table_returns_actual_xml_path(tmp_path):
         np.array([0.1, 0.1, 0.1]),
         "Q_A^-1",
         output_format="cansas_xml",
+        calibration_context=_labeled_export_context(),
+        thickness_cm=0.1055,
+        thickness_source="certified SRM 3600 thickness",
     )
 
     assert written == tmp_path / "absolute.xml"

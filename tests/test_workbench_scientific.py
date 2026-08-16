@@ -1308,7 +1308,8 @@ def test_tab3_workbench_parser_roundtrips_cansas_xml(tmp_path):
     assert profile["x_col"] == "Q"
     assert profile["i_col"] == "I"
     assert profile["err_col"] == "Idev"
-    assert profile["operator_provenance"] == {}
+    assert profile["operator_provenance"]["intensity_state"] == "absolute_cm^-1"
+    assert profile["operator_provenance"]["intensity_unit"] == "1/cm"
 
 
 def test_tab3_external_buffer_empty_path_fails_closed_and_updates_status():
