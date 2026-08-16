@@ -339,8 +339,16 @@ def test_resume_rejects_mismatched_profile_without_sidecar(
 
 def test_manifest_rejects_traversal_before_reading_outputs(tmp_path: Path):
     package, manifest = _build_package(tmp_path)
-    text = manifest.read_text(encoding="utf-8")
-    manifest.write_text(text.replace("problem\\sample_00001.tif", "../sample_00001.tif"), encoding="utf-8")
+    with manifest.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        rows = list(reader)
+        fieldnames = reader.fieldnames
+    assert rows and fieldnames is not None
+    rows[0]["relative_path"] = "../sample_00001.tif"
+    with manifest.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
     with pytest.raises(ValueError, match="unsafe relative_path"):
         integration._read_manifest(integration.Integrate1DConfig(package))
 

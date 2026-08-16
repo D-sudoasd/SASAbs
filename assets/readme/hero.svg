@@ -1,32 +1,42 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
-  <title id="title">saxsabs / SAXSAbs Workbench</title>
-  <desc id="desc">SAXS absolute intensity calibration with multi-standard K-factor estimation and provenance gates.</desc>
-  <rect width="1200" height="360" rx="26" fill="#12100C"/>
-  <path d="M0 54H1200M700 0V360" stroke="#2A241C"/>
-  <g transform="translate(56 40)" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
-    <text fill="#9A8A70" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13" letter-spacing="2.2">SAXS · ABSOLUTE INTENSITY · PROVENANCE</text>
-    <text y="100" fill="#F5F0E4" font-family="Georgia,'Times New Roman',serif" font-size="64" font-weight="700" letter-spacing="-1.2">saxsabs</text>
-    <text y="148" fill="#C8BCA4" font-size="22">SAXSAbs Workbench — calibrate K, process batches, export absolute 1D.</text>
-    <path d="M0 176H520" stroke="#3A3228"/>
-    <g transform="translate(0 210)" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12">
-      <text fill="#F5F0E4">K-FACTOR</text>
-      <text x="110" fill="#8A7A62">BATCH 2D</text>
-      <text x="220" fill="#8A7A62">EXTERNAL 1D</text>
-      <text x="360" fill="#E8C36A">FAIL-CLOSED</text>
+  <title id="title">SASAbs traceable absolute-intensity calibration</title>
+  <desc id="desc">Detector signal and reference intensity pass through robust K-factor estimation to an absolute SAXS profile with units and provenance.</desc>
+  <rect width="1200" height="360" rx="22" fill="#071218"/>
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif">
+    <g transform="translate(58 48)">
+      <text x="0" y="0" fill="#86A0B2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18" letter-spacing="2.4">SAXS ABSOLUTE-INTENSITY CALIBRATION</text>
+      <text x="0" y="72" fill="#F5F7F8" font-size="46" font-weight="720">A calibration record</text>
+      <text x="0" y="126" fill="#F5F7F8" font-size="46" font-weight="720">you can inspect.</text>
+      <text x="0" y="176" fill="#B9C6CF" font-size="22">Robust K estimation, explicit intensity states,</text>
+      <text x="0" y="208" fill="#B9C6CF" font-size="22">portable outputs, and reviewable provenance.</text>
+      <path d="M0 250H520" stroke="#2A3A45"/>
+      <text x="0" y="282" fill="#86A0B2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18">CLI  ·  PYTHON API  ·  DESKTOP WORKBENCH</text>
     </g>
-    <text y="270" fill="#6A5E4A" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12">DOI 10.5281/zenodo.19687104 · BSD-3-Clause</text>
-  </g>
-  <g transform="translate(740 48)">
-    <rect width="400" height="264" fill="#0E0C0A" stroke="#3A3228"/>
-    <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace">
-      <text x="28" y="40" fill="#E8C36A" font-size="14">TAB 1 · K calibration (2D)</text>
-      <text x="28" y="78" fill="#E8DCC8" font-size="14">TAB 2 · Batch 2D → abs 1D</text>
-      <text x="28" y="116" fill="#E8DCC8" font-size="14">TAB 3 · External 1D → abs</text>
-      <path d="M28 140 H360" stroke="#3A3228"/>
-      <text x="28" y="172" fill="#8A7A62" font-size="12">I_abs = K · I_rel · corrections…</text>
-      <polyline points="28,220 80,212 130,214 180,196 230,188 280,182 340,176" fill="none" stroke="#6EC1FF" stroke-width="2.2"/>
-      <text x="28" y="248" fill="#6A5E4A" font-size="11">READY · CAUTION · BLOCKED</text>
+
+    <g transform="translate(650 42)">
+      <path d="M0 0H492M0 276H492" stroke="#2A3A45"/>
+      <text x="0" y="26" fill="#86A0B2" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="18" letter-spacing="1.6">CALIBRATION PATH</text>
+
+      <g transform="translate(0 55)">
+        <path d="M0 122H492M0 16V122" stroke="#2A3A45" stroke-width="1.5"/>
+        <path d="M8 96C49 88 83 76 117 60C154 43 190 36 230 31C271 26 311 23 350 21C394 18 434 16 484 13" fill="none" stroke="#D38A3B" stroke-width="4"/>
+        <path d="M8 103C47 91 82 80 117 63C153 47 191 39 231 34C270 29 310 26 350 23C393 20 434 18 484 16" fill="none" stroke="#5CA7D1" stroke-width="3" stroke-dasharray="7 7"/>
+        <circle cx="58" cy="85" r="4" fill="#5CA7D1"/><circle cx="117" cy="63" r="4" fill="#5CA7D1"/><circle cx="191" cy="39" r="4" fill="#5CA7D1"/><circle cx="270" cy="29" r="4" fill="#5CA7D1"/><circle cx="350" cy="23" r="4" fill="#5CA7D1"/><circle cx="434" cy="18" r="4" fill="#5CA7D1"/>
+        <text x="0" y="151" fill="#86A0B2" font-size="18">detector signal</text>
+        <text x="365" y="151" fill="#86A0B2" font-size="18">reference I(q)</text>
+      </g>
+
+      <g transform="translate(0 231)">
+        <circle cx="10" cy="4" r="5" fill="#5CA7D1"/>
+        <text x="26" y="11" fill="#F5F7F8" font-size="20" font-weight="650">robust K</text>
+        <path d="M122 4H170" stroke="#506473" stroke-width="2"/>
+        <path d="M160 -3L171 4L160 11" fill="none" stroke="#506473" stroke-width="2"/>
+        <text x="190" y="11" fill="#F5F7F8" font-size="20" font-weight="650">absolute I(q)</text>
+        <path d="M318 4H358" stroke="#506473" stroke-width="2"/>
+        <path d="M348 -3L359 4L348 11" fill="none" stroke="#506473" stroke-width="2"/>
+        <circle cx="379" cy="4" r="5" fill="#69B594"/>
+        <text x="395" y="11" fill="#F5F7F8" font-size="20" font-weight="650">provenance</text>
+      </g>
     </g>
   </g>
-  <text x="1144" y="336" text-anchor="end" fill="#5A4E3C" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12">D-sudoasd / SASAbs…</text>
 </svg>

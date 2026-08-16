@@ -1,5 +1,22 @@
 include CHANGELOG.md
 include CITATION.cff
+include CODE_OF_CONDUCT.md
+include CONTRIBUTING.md
+include LICENSE
+include SUBMISSION_READINESS.md
 include codemeta.json
 include .zenodo.json
-include tests/conftest.py
+include SASAbs.py
+include saxs_mpl_style.py
+include saxsabs_workbench.py
+include saxsabs_workbench.pyw
+include Start_SAXSAbs_Workbench.bat
+include .github/workflows/ci.yml
+include .github/workflows/release.yml
+recursive-include assets *.md *.png *.svg
+recursive-include docs *.json *.md
+recursive-include examples *.csv *.json *.md *.py *.yml
+recursive-include paper *.bib *.md *.pdf *.png *.py *.svg
+recursive-include scripts *.py
+recursive-include src *.py
+recursive-include tests *.py

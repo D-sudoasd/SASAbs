@@ -1,5 +1,7 @@
 """Tests for canSAS XML and NXcanSAS HDF5 I/O round-trip."""
 
+import xml.etree.ElementTree as ET
+
 import numpy as np
 import pytest
 
@@ -57,6 +59,38 @@ class TestCanSAS1DXML:
         }
         out = write_cansas1d_xml(xml_path, q, i_abs, err, metadata=meta)
         assert out == xml_path
+
+    def test_write_includes_schema_required_notes(self, tmp_path):
+        q, i_abs, err = self._make_data(3)
+        xml_path = tmp_path / "schema-required-notes.xml"
+
+        write_cansas1d_xml(xml_path, q, i_abs, err)
+
+        namespace = {"cansas": "urn:cansas1d:1.1"}
+        root = ET.parse(xml_path).getroot()
+        entry = root.find("cansas:SASentry", namespace)
+        assert entry is not None
+        process = entry.find("cansas:SASprocess", namespace)
+        assert process is not None
+        assert process.find("cansas:SASprocessnote", namespace) is not None
+        assert entry.find("cansas:SASnote", namespace) is not None
+
+    def test_inherited_thickness_provenance_roundtrip(self, tmp_path):
+        q, i_abs, err = self._make_data(10)
+        xml_path = tmp_path / "thickness.xml"
+        write_cansas1d_xml(
+            xml_path,
+            q,
+            i_abs,
+            err,
+            metadata={
+                "thickness_cm": "0.1",
+                "thickness_source": "upstream sample cell record",
+            },
+        )
+        provenance = read_cansas1d_xml(xml_path)["operator_provenance"]
+        assert provenance["thickness_cm"] == "0.1"
+        assert provenance["thickness_source"] == "upstream sample cell record"
 
     def test_write_shape_mismatch_raises(self, tmp_path):
         xml_path = tmp_path / "bad.xml"
@@ -120,6 +154,23 @@ class TestNXcanSASHDF5:
         write_nxcansas_h5(h5_path, q, i_abs, err)
         result = read_external_1d_profile(str(h5_path))
         np.testing.assert_allclose(result["x"], q, rtol=1e-10)
+
+    def test_inherited_thickness_provenance_roundtrip(self, tmp_path):
+        q, i_abs, err = self._make_data(10)
+        h5_path = tmp_path / "thickness.h5"
+        write_nxcansas_h5(
+            h5_path,
+            q,
+            i_abs,
+            err,
+            metadata={
+                "thickness_cm": "0.1",
+                "thickness_source": "upstream sample cell record",
+            },
+        )
+        provenance = read_nxcansas_h5(h5_path)["operator_provenance"]
+        assert provenance["thickness_cm"] == "0.1"
+        assert provenance["thickness_source"] == "upstream sample cell record"
 
     @pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
     def test_write_rejects_nonfinite_q(self, tmp_path, bad_value):

@@ -1,20 +1,16 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it using the metadata below."
+message: "Cite an exact archived release when available. The README lists the project-level Zenodo concept DOI; version 2.0.0 is currently unreleased."
 title: "saxsabs"
 version: "2.0.0"
-date-released: "2026-07-13"
 type: software
-identifiers:
-  - type: doi
-    value: 10.5281/zenodo.19687104
-url: "https://doi.org/10.5281/zenodo.19687104"
+url: "https://github.com/D-sudoasd/SASAbs"
 authors:
   - family-names: "Gong"
     given-names: "Delun"
     orcid: "https://orcid.org/0000-0001-7877-7707"
     affiliation: "Institute of Metal Research, Chinese Academy of Sciences"
     email: "dlgong@imr.ac.cn"
-repository-code: "https://github.com/D-sudoasd/SASAbs_saxs-absolute-calibration"
+repository-code: "https://github.com/D-sudoasd/SASAbs"
 license: "BSD-3-Clause"
 keywords:
   - SAXS

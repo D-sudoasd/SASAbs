@@ -9,17 +9,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-SRC_DIR = REPO_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
-from saxsabs import (  # noqa: E402
+from saxsabs import (
     build_nist_net_image,
     estimate_k_factor_robust,
     get_reference_data,
@@ -193,11 +187,11 @@ def run_pipeline(output_dir: Path) -> dict[str, object]:
     )
 
     output_meta = {
-        "title": "saxsabs independent synthetic raw-frame validation",
+        "title": "saxsabs deterministic synthetic raw-frame validation",
         "run": "minimal-2d-golden-001",
         "wavelength_A": float(geometry["wavelength_A"]),
         "sdd_m": float(geometry["distance_m"]),
-        "sample_name": "synthetic-independent-golden",
+        "sample_name": "synthetic-deterministic-golden",
         "instrument_name": "synthetic-detector",
         "detector_name": "synthetic-array",
         "process_name": "minimal_2d_pipeline",
@@ -224,7 +218,7 @@ def run_pipeline(output_dir: Path) -> dict[str, object]:
         pass
 
     summary: dict[str, object] = {
-        "validation_type": "independent_synthetic_raw_frames",
+        "validation_type": "deterministic_synthetic_raw_frames",
         "points": int(q.size),
         "q_min": float(q.min()),
         "q_max": float(q.max()),

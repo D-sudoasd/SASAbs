@@ -1,5 +1,6 @@
 import ast
 import importlib.util
+import shutil
 import subprocess
 import sys
 import types
@@ -70,18 +71,34 @@ def test_resolve_app_source_uses_source_tree_not_cwd_shadow(
 
 
 def test_wheel_includes_legacy_gui_module(tmp_path: Path):
+    source_copy = tmp_path / "source"
+    wheelhouse = tmp_path / "wheelhouse"
+    shutil.copytree(
+        REPO_ROOT,
+        source_copy,
+        ignore=shutil.ignore_patterns(
+            ".git",
+            "build",
+            "dist",
+            "*.egg-info",
+            "__pycache__",
+            ".pytest_cache",
+            ".ruff_cache",
+        ),
+    )
+    wheelhouse.mkdir()
     completed = subprocess.run(
         [
             sys.executable,
             "-m",
             "pip",
             "wheel",
-            str(REPO_ROOT),
+            str(source_copy),
             "--no-deps",
             "--no-build-isolation",
             "--no-cache-dir",
             "-w",
-            str(tmp_path),
+            str(wheelhouse),
         ],
         check=False,
         stdout=subprocess.PIPE,
@@ -93,7 +110,7 @@ def test_wheel_includes_legacy_gui_module(tmp_path: Path):
         f"stdout:\n{completed.stdout}\n"
         f"stderr:\n{completed.stderr}"
     )
-    wheels = list(tmp_path.glob("saxsabs-*.whl"))
+    wheels = list(wheelhouse.glob("saxsabs-*.whl"))
     assert len(wheels) == 1
 
     with zipfile.ZipFile(wheels[0]) as wheel:

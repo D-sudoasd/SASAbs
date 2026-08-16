@@ -1,35 +1,56 @@
 # Contributing
 
-Thanks for contributing to `saxsabs`.
+Thanks for contributing to `saxsabs`. The canonical repository is
+<https://github.com/D-sudoasd/SASAbs>.
+
+## Get help or report a problem
+
+- Report reproducible bugs through the [issue tracker](https://github.com/D-sudoasd/SASAbs/issues).
+- Use a feature request when proposing a new workflow or capability.
+- For a question that is neither a defect nor a proposal, contact the project
+  maintainers through the repository before opening a broad pull request.
+
+Please do not include beamline-private data, credentials, or large generated
+outputs in an issue or pull request.
 
 ## Development setup
 
 ```bash
-pip install -e .[dev]
+git clone https://github.com/D-sudoasd/SASAbs.git
+cd SASAbs
+python -m pip install -e ".[dev]"
 pytest -q
 ruff check src tests
 ```
 
-## Pull request checklist
+Install `.[gui]`, `.[hdf5]`, `.[io]`, or `.[bl19b2]` only when the change needs
+those optional workflows.
 
-- Add or update tests for behavior changes.
-- Keep GUI and core logic separated when possible.
-- Update docs for new CLI/API behavior.
-- Ensure CI is green.
+## Pull requests
 
-## Scope policy
+Keep pull requests focused. For a behavior change:
 
-This project prioritizes robust SAXS absolute-calibration workflows and reproducible data-processing paths. PRs that improve reliability, reproducibility, and traceability are preferred.
+- add or update focused tests;
+- keep reusable scientific logic in `src/saxsabs/` and GUI orchestration separate;
+- update public CLI/API documentation when its behavior changes;
+- run `pytest -q` and `ruff check src tests` locally;
+- describe the workflow, validation performed, and any remaining limitations.
 
-## Reporting bugs
+Maintainers review pull requests for scientific input semantics, provenance,
+reproducibility, and compatibility with supported optional dependencies.
 
-Please open an issue at <https://github.com/D-sudoasd/SASAbs_saxs-absolute-calibration/issues> with:
+## Release expectations
 
-- A clear title and description of the problem.
-- Steps to reproduce the issue.
-- Expected vs. actual behaviour.
-- Python version, OS, and relevant package versions (`pip list`).
+Releases are created from version tags after the validation workflow succeeds.
+Before tagging, replace the `Unreleased` changelog heading with the ISO release
+date, add the same `date-released` to `CITATION.cff`, and set its message to
+`Cite the version-specific archive record for this release.` The release
+metadata validator rejects provisional or inconsistent values.
+Before describing a release-specific DOI in project metadata or release notes,
+ensure Zenodo has archived that release and assigned its DOI. The project-level
+concept DOI remains suitable for general project citation.
 
 ## Code of Conduct
 
-This project follows the [Contributor Covenant Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/). By participating, you are expected to uphold this code. Please report unacceptable behaviour to the repository maintainer.
+This project follows the [Contributor Covenant Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+Report unacceptable behaviour to the repository maintainer.

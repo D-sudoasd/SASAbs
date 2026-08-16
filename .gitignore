@@ -26,12 +26,13 @@ build/
 dist/
 logs/
 examples/minimal_2d/outputs/
-# Local audit build/test artifacts (Markdown ledgers remain trackable)
+# Local audit and build/test artifacts
 .audit-work/
+JOSS_AUDIT_AND_UPGRADE.md
 audit_outputs/
-.audit-work/**/*.xml
-.audit-work/**/*.whl
-.audit-work/pip-cache*/
-.audit-work/wheel-*/
-.audit-work/dist-*/
-.audit-work/sdist-*/
+
+# Generated JOSS build products (review copies are delivered outside the repo)
+paper/paper.pdf
+paper/paper.tex
+paper/paper.jats/
+paper/paper.*.log

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "saxsabs"
 version = "2.0.0"
-description = "SAXS absolute intensity calibration and robust 1D profile utilities"
+description = "Traceable SAXS absolute-intensity calibration and profile I/O"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "BSD-3-Clause"
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["SAXS", "absolute intensity", "calibration", "synchrotron", "scattering"]
 classifiers = [
-  "Development Status :: 5 - Production/Stable",
+  "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",
@@ -47,9 +47,11 @@ bl19b2 = [
 ]
 dev = [
   "matplotlib>=3.7",
+  "PyYAML>=6.0",
   "pytest>=8.0",
   "ruff>=0.5",
   "setuptools>=69",
+  "tomli>=2.0; python_version < '3.11'",
   "wheel",
 ]
 
@@ -58,15 +60,15 @@ saxsabs = "saxsabs.cli:main"
 saxsabs-workbench = "saxsabs.workbench_launcher:run_with_error_handling"
 
 [project.urls]
-Homepage = "https://github.com/D-sudoasd/SASAbs_saxs-absolute-calibration"
-Repository = "https://github.com/D-sudoasd/SASAbs_saxs-absolute-calibration"
-Issues = "https://github.com/D-sudoasd/SASAbs_saxs-absolute-calibration/issues"
-Changelog = "https://github.com/D-sudoasd/SASAbs_saxs-absolute-calibration/blob/main/CHANGELOG.md"
-DOI = "https://doi.org/10.5281/zenodo.19687104"
+Homepage = "https://github.com/D-sudoasd/SASAbs"
+Repository = "https://github.com/D-sudoasd/SASAbs"
+Issues = "https://github.com/D-sudoasd/SASAbs/issues"
+Changelog = "https://github.com/D-sudoasd/SASAbs/blob/main/CHANGELOG.md"
+"Concept DOI" = "https://doi.org/10.5281/zenodo.19687103"
 
 [tool.setuptools]
 package-dir = {"" = ".", "saxsabs" = "src/saxsabs"}
-py-modules = ["SASAbs"]
+py-modules = ["SASAbs", "saxs_mpl_style"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -76,3 +78,8 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
+# Keep the project lint contract explicit so a user-level Ruff configuration
+# cannot silently broaden CI to unrelated stylistic rules.
+select = ["E4", "E7", "E9", "F"]

@@ -2,12 +2,12 @@ schema: saxsabs.bl19b2_abs2d.config.v1
 description: Template for future SPring-8 BL19B2 SAXS absolute-corrected 2D batches.
 
 # Replace these paths for each new beamtime.
-input_root: H:/path/to/BL19B2 DATA/datXXX
-pydidas_cali_yaml: H:/path/to/BL19B2 DATA/datXXX/reference_saxs/Cali.yaml
+input_root: ./data/datXXX
+pydidas_cali_yaml: ./data/datXXX/reference_saxs/Cali.yaml
 # Alternative when a pyFAI PONI already exists. Use either this or
 # pydidas_cali_yaml, not both.
 poni_path: null
-output_root: H:/path/to/BL19B2 DATA/datXXX_absolute_corrected_2D
+output_root: ./outputs/datXXX_absolute_corrected_2D
 
 # Reference files default to input_root/reference_saxs when omitted. If a
 # beamtime uses different names, pass the matching CLI options shown below

@@ -1,7 +1,7 @@
 """SAXSAbs Workbench — GUI for SAXS absolute intensity calibration.
 
 Part of the saxsabs package.
-Repository: https://github.com/D-sudoasd/SASAbs_saxs-absolute-calibration
+Repository: https://github.com/D-sudoasd/SASAbs
 License: BSD-3-Clause
 """
 import tkinter as tk
@@ -16,7 +16,6 @@ import numpy as np
 import fabio
 import pyFAI
 import matplotlib
-matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from pathlib import Path
 import traceback
@@ -1656,6 +1655,8 @@ MONITOR_NORM_MODES = ("rate", "integrated")
 
 class SAXSAbsWorkbenchApp:
     def __init__(self, root, language="en"):
+        # Select the interactive backend only when a real Tk workbench is starting.
+        matplotlib.use("TkAgg")
         self.root = root
         self.language = (language or "en").strip().lower()
         if self.language not in SUPPORTED_LANGUAGES:
@@ -3505,6 +3506,8 @@ class SAXSAbsWorkbenchApp:
         *,
         corrections_applied=None,
         k_factor=None,
+        thickness_cm=None,
+        thickness_source=None,
     ):
         """Return portable operator provenance for a project-owned 1-D export.
 
@@ -3555,6 +3558,15 @@ class SAXSAbsWorkbenchApp:
             if not np.isfinite(k_value) or k_value <= 0:
                 raise ValueError("1-D export provenance requires finite positive K")
             metadata["k_factor"] = format(k_value, ".17g")
+        if thickness_cm is not None:
+            thickness_value = float(thickness_cm)
+            if not np.isfinite(thickness_value) or thickness_value <= 0:
+                raise ValueError("1-D export provenance requires finite positive thickness_cm")
+            metadata["thickness_cm"] = format(thickness_value, ".17g")
+            source = str(thickness_source or "").strip()
+            if not source:
+                raise ValueError("1-D export provenance requires thickness_source")
+            metadata["thickness_source"] = source
         return metadata
 
     def save_profile_table(
@@ -3570,6 +3582,8 @@ class SAXSAbsWorkbenchApp:
         corrections_applied=None,
         combined_uncertainty=None,
         uncertainty_metadata=None,
+        thickness_cm=None,
+        thickness_source=None,
     ):
         # Origin-friendly text table: first row is column names, tab-separated.
         out_path = Path(out_path)
@@ -3592,6 +3606,8 @@ class SAXSAbsWorkbenchApp:
         profile_metadata = self.profile_operator_metadata(
             calibration_context,
             corrections_applied=corrections_applied,
+            thickness_cm=thickness_cm,
+            thickness_source=thickness_source,
         )
         if uncertainty_metadata:
             profile_metadata.update(dict(uncertainty_metadata))
@@ -3649,6 +3665,8 @@ class SAXSAbsWorkbenchApp:
                 "intensity_unit",
                 "corrections_applied",
                 "do_not_repeat",
+                "thickness_cm",
+                "thickness_source",
                 "buffer_source_name",
                 "buffer_source_sha256",
                 "buffer_alpha",
@@ -3857,7 +3875,7 @@ class SAXSAbsWorkbenchApp:
     # =========================================================================
     def init_tab1_k_calc(self):
         p = self.tab1
-        left_panel_holder = ttk.Frame(p, width=440)
+        left_panel_holder = ttk.Frame(p, width=460)
         left_panel_holder.pack(side="left", fill="y", padx=8, pady=8)
         left_panel_holder.pack_propagate(False)
         left_panel = self._make_scrollable_frame(left_panel_holder)
@@ -3876,7 +3894,7 @@ class SAXSAbsWorkbenchApp:
         f_files = ttk.LabelFrame(left_panel, text=self.tr("t1_files_title"), style="Group.TLabelframe")
         self._register_i18n_widget(f_files, "t1_files_title")
         f_files.pack(fill="x", pady=5)
-        self.add_hint(f_files, "hint_t1_files")
+        self.add_hint(f_files, "hint_t1_files", wraplength=390)
         
         self.t1_files = {
             "std": tk.StringVar(), "bg": self.global_vars["bg_path"],
@@ -3959,7 +3977,7 @@ class SAXSAbsWorkbenchApp:
         f_phys = ttk.LabelFrame(left_panel, text=self.tr("t1_phys_title"), style="Group.TLabelframe")
         self._register_i18n_widget(f_phys, "t1_phys_title")
         f_phys.pack(fill="x", pady=5)
-        self.add_hint(f_phys, "hint_t1_phys")
+        self.add_hint(f_phys, "hint_t1_phys", wraplength=390)
         f_phys_grid = ttk.Frame(f_phys)
         f_phys_grid.pack(fill="x")
         
@@ -4007,21 +4025,24 @@ class SAXSAbsWorkbenchApp:
             style="Hint.TLabel",
         )
         lbl_norm_hint_t1.pack(side="left")
+
+        correction_row = ttk.Frame(f_phys)
+        correction_row.pack(fill="x", pady=(2, 0))
         cb_solid_t1 = ttk.Checkbutton(
-            norm_row,
+            correction_row,
             text=self.tr("cb_solid_angle"),
             variable=self.global_vars["apply_solid_angle"],
         )
-        cb_solid_t1.pack(side="left", padx=(8, 0))
+        cb_solid_t1.pack(side="left")
         self._register_i18n_widget(cb_solid_t1, "cb_solid_angle")
         cb_pol_t1 = ttk.Checkbutton(
-            norm_row,
+            correction_row,
             text="Polarization",
             variable=self.global_vars["polarization_enabled"],
         )
         cb_pol_t1.pack(side="left", padx=(8, 2))
         e_pol_t1 = ttk.Entry(
-            norm_row,
+            correction_row,
             textvariable=self.global_vars["polarization_factor"],
             width=6,
         )
@@ -5085,6 +5106,10 @@ class SAXSAbsWorkbenchApp:
             "correctionsapplied": "corrections_applied",
             "donotrepeat": "do_not_repeat",
             "intensityunit": "intensity_unit",
+            "thicknesscm": "thickness_cm",
+            "inheritedthicknesscm": "thickness_cm",
+            "thicknesssource": "thickness_source",
+            "inheritedthicknesssource": "thickness_source",
             "kfactor": "k_factor",
             "calibrationk": "k_factor",
         }
@@ -5132,12 +5157,39 @@ class SAXSAbsWorkbenchApp:
             raise ValueError(f"{profile_name}: unknown correction mode: {mode}")
         if apply_buffer:
             corrections_to_apply.append("buffer")
-        return require_relative_input_for_absolute_scaling(
+        assessment = require_relative_input_for_absolute_scaling(
             profile,
             profile_name=profile_name,
             corrections_to_apply=corrections_to_apply,
             required_existing_corrections=required_existing,
         )
+        if mode == "k_only":
+            provenance = profile.get("operator_provenance")
+            provenance = provenance if isinstance(provenance, dict) else {}
+            raw_thickness = provenance.get("thickness_cm", profile.get("thickness_cm"))
+            try:
+                inherited_thickness_cm = float(raw_thickness)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"{profile_name}: K-only scaling requires positive thickness_cm provenance"
+                ) from exc
+            if not np.isfinite(inherited_thickness_cm) or inherited_thickness_cm <= 0:
+                raise ValueError(
+                    f"{profile_name}: K-only scaling requires positive thickness_cm provenance"
+                )
+            thickness_source = str(
+                provenance.get("thickness_source", profile.get("thickness_source", "")) or ""
+            ).strip()
+            if not thickness_source or thickness_source.lower() in {
+                "none",
+                "null",
+                "unknown",
+                "n/a",
+            }:
+                raise ValueError(
+                    f"{profile_name}: K-only scaling requires thickness_source provenance"
+                )
+        return assessment
 
     def require_external_profile_operator_provenance(
         self,
@@ -6654,7 +6706,13 @@ class SAXSAbsWorkbenchApp:
                     else:
                         if pipeline_mode == "scaled":
                             scale_factor = scale_factor_global
-                            thk_cm_used = fixed_thk_cm
+                            if corr_mode == "k_only":
+                                provenance = prof.get("operator_provenance") or {}
+                                thk_cm_used = float(provenance["thickness_cm"])
+                                thickness_source = str(provenance["thickness_source"])
+                            else:
+                                thk_cm_used = fixed_thk_cm
+                                thickness_source = "tab3_fixed_thickness_input"
                             i_abs = np.asarray(prof["i_rel"], dtype=np.float64) * scale_factor
                             err_abs = np.asarray(prof["err_rel"], dtype=np.float64) * abs(scale_factor)
                         else:
@@ -6671,9 +6729,17 @@ class SAXSAbsWorkbenchApp:
                                 thk_cm_used = float(thk_use_mm) / 10.0
                                 if not np.isfinite(thk_cm_used) or thk_cm_used <= 0:
                                     raise ValueError("厚度无效（固定厚度或metadata thk_mm）")
+                                thickness_source = (
+                                    "external_metadata_thk_mm"
+                                    if self.t3_use_meta_thk.get()
+                                    and sp["thk_mm_meta"] is not None
+                                    else "tab3_fixed_thickness_input"
+                                )
                                 scale_factor = k / thk_cm_used
                             else:
-                                thk_cm_used = np.nan
+                                provenance = prof.get("operator_provenance") or {}
+                                thk_cm_used = float(provenance["thickness_cm"])
+                                thickness_source = str(provenance["thickness_source"])
                                 scale_factor = k
 
                             s_i = np.asarray(prof["i_rel"], dtype=np.float64)
@@ -6776,9 +6842,12 @@ class SAXSAbsWorkbenchApp:
                             x_label,
                             output_format=output_format,
                             run_policy=run_policy,
+                            calibration_context=active_calibration_context,
                             corrections_applied=output_corrections,
                             combined_uncertainty=combined_uncertainty,
                             uncertainty_metadata=uncertainty_metadata,
+                            thickness_cm=thk_cm_used,
+                            thickness_source=thickness_source,
                         )
                         if buffer_info["enabled"]:
                             buffer_applied = True

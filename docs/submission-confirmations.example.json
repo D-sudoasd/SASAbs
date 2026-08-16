@@ -1,0 +1,13 @@
+{
+  "public_history_confirmed": false,
+  "repository_identity_confirmed": false,
+  "research_use_confirmed": false,
+  "authorship_confirmed": false,
+  "ai_disclosure_confirmed": false,
+  "funding_and_coi_confirmed": false,
+  "confirmed_on": "",
+  "research_evidence_reference": "",
+  "ci_run_url": "",
+  "submitted_branch": "",
+  "submitted_commit": ""
+}
