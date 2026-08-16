@@ -17,8 +17,9 @@
 - Point README and paper at the unreleased 2.0.0 tree on `main`, not GitHub
   Release v1.1.1. Record canSAS XSD / punx checks as offline 2026-08-15, not CI.
 - Tighten the paper's K-estimator, interface-equivalence, and `minimal_2d`
-  claims, and remove stale Draft-PR #1 merge instructions from the README and
-  readiness notes.
+  claims (9×9 homemade radial average, not pyFAI; unknown uncertainty; not the
+  BL19B2 campaign runner), and remove stale Draft-PR #1 merge instructions from
+  the README and readiness notes.
 
 ### Submission-candidate hardening (2026-08-12)
 

@@ -11,8 +11,9 @@ create `v2.0.0`, a GitHub Release, or a Zenodo version archive during review.
   count and duration are retained in the dated external validation record.
 - Ruff: root modules, package, tests, paper scripts, and submission gate pass.
 - README: 5 local images and all local links resolve; SVG/image audit passes.
-- Minimal 2D example: K and sample maximum relative errors are
-  `0.001933697...`; CSV, TSV, XML, and HDF5 outputs are written.
+- Minimal 2D example: 9×9 homemade radial average (not pyFAI) recovers planted
+  K and sample maximum relative errors of `0.001933697...`; CSV, TSV, XML, and
+  HDF5 outputs are written with unknown uncertainty.
 - Fresh-copy distribution build: wheel and sdist PASS from a source tree
   outside every Git checkout. The exact archive inventory is retained in the
   dated external validation record; the sdist includes README assets,
