@@ -64,11 +64,13 @@ accessed 16 August 2026:
       table and does not describe either as XCOM.
 - [x] The workflow figure has editable SVG/PDF sources and the GUI image is a
       window-scoped capture of the actual Workbench.
-- [x] canSAS1d XML from the deterministic example validates against the official
-      version 1.1 XSD with zero errors.
-- [ ] NXcanSAS HDF5 passes punx 0.3.5 with its bundled v2018.5 definitions, but
-      current NeXus definitions and a third-party application consumer remain
-      unverified because punx 0.3.5 cannot parse the current definition set.
+- [x] canSAS1d XML from the deterministic example validated offline on
+      15 August 2026 against the official version 1.1 XSD with zero errors.
+      That check is not in CI.
+- [ ] NXcanSAS HDF5 passed punx 0.3.5 offline on 15 August 2026 with its
+      bundled v2018.5 definitions; that check is not in CI. Current NeXus
+      definitions and a third-party application consumer remain unverified
+      because punx 0.3.5 cannot parse the current definition set.
 - [ ] The author confirms author order, affiliation, corresponding author,
       acknowledgements, funding, conflicts of interest, and contribution roles.
 - [ ] The author confirms the complete AI disclosure and human review statement.

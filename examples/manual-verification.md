@@ -53,6 +53,10 @@ cannot be fully public.
    saxsabs estimate-k --meas examples/k_measured.csv --ref examples/k_reference.csv --qmin 0.01 --qmax 0.2
    ```
 
+   The measured file already declares `# intensity_state: relative`. Unlabeled
+   intensity is refused. Thickness, when needed, is `--thickness-cm` (Workbench
+   Tab 1 enters millimetres: `1.055 mm = 0.1055 cm`).
+
    Expected: `k_factor` close to `2.0`, with non-zero `points_used`.
 
 7. Verify the deterministic synthetic raw-frame → absolute intensity workflow:

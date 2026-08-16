@@ -43,8 +43,11 @@ estimate_k_factor_robust(
 
 Interpolates the measured profile on the reference q grid in `q_window`, forms
 `I_ref / I_meas`, and applies median/MAD outlier rejection. If both reference
-arrays are omitted, it uses the built-in NIST SRM 3600 reference. The result
-contains the estimate and diagnostics; inspect it before applying a scale.
+arrays are omitted, it uses the built-in NIST SRM 3600 reference and fails
+closed if any ratio exceeds the certificate-derived relative-intensity limit
+before that filter. Measured intensities must already be on the same scale as
+the reference (cm$^{-1}$ for SRM 3600). The result contains the estimate and
+diagnostics; inspect it before applying a scale.
 
 ```python
 from saxsabs import estimate_k_factor_robust
@@ -87,7 +90,9 @@ print(mu.mu_linear_cm_inv)
 assess_intensity_state(profile: Mapping[str, object]) -> IntensityStateAssessment
 subtract_buffer(q_sample, i_sample, err_sample, q_buffer, i_buffer, err_buffer,
                 alpha: float = 1.0, high_q_diag: tuple[float, float] = (0.15, 0.25),
-                *, alpha_uncertainty: float | None = None) -> BufferSubtractionResult
+                *, alpha_uncertainty: float | None = None,
+                sample_profile: Mapping[str, object],
+                buffer_profile: Mapping[str, object]) -> BufferSubtractionResult
 propagate_absolute_uncertainty(intensity: np.ndarray, *,
     statistical_standard_uncertainty=None, k_relative_standard_uncertainty=None,
     standard_relative_standard_uncertainty=None,
@@ -99,8 +104,10 @@ propagate_absolute_uncertainty(intensity: np.ndarray, *,
 ```
 
 `assess_intensity_state` classifies metadata, units, and correction information;
-conflicting evidence remains ambiguous. `subtract_buffer` interpolates a buffer
-onto the sample q grid when necessary and propagates supplied uncertainties.
+conflicting evidence remains ambiguous. A unitless metadata label `absolute` is
+ambiguous and is not treated as cm$^{-1}$. `subtract_buffer` requires
+`sample_profile` and `buffer_profile` provenance, interpolates a buffer onto
+the sample q grid when necessary, and propagates supplied uncertainties.
 `propagate_absolute_uncertainty` combines statistical and supplied standard
 uncertainty components; relative inputs must be relative standard uncertainties.
 
@@ -117,20 +124,21 @@ write_nxcansas_h5(path: str | Path, q: np.ndarray, i_abs: np.ndarray,
 ```
 
 `read_external_1d_profile` reads supported text/tabular profiles and routes XML
-and HDF5 extensions to canSAS/NXcanSAS readers. The returned mapping includes
-the parsed arrays and parsing metadata. Writers expect q in Å⁻¹, absolute
-intensity in cm⁻¹, and optional uncertainty in cm⁻¹. NXcanSAS writing requires
-the optional `h5py` dependency.
+and HDF5 extensions to canSAS/NXcanSAS readers. The returned mapping always
+includes `intensity` and `uncertainty`. It adds `i_abs`/`err_abs` only for
+assessed `absolute_cm^-1` profiles and `i_rel`/`err_rel` only for assessed
+`relative` profiles. Writers expect q in Å⁻¹ and stamp `1/cm` only when
+metadata declares `intensity_state=absolute_cm^-1` and an explicit cm⁻¹ unit.
+NXcanSAS writing requires the optional `h5py` dependency.
 
 ```python
-from saxsabs import read_external_1d_profile
+from saxsabs.io import profile_intensity, read_external_1d_profile
 
 profile = read_external_1d_profile("examples/profile_example.csv")
-print(profile["x"], profile["i_rel"])
+print(profile["x"], profile_intensity(profile), profile.get("intensity_state"))
 ```
 
-The parser deliberately names an uncalibrated intensity array `i_rel`. Do not
-pass that array to an absolute-intensity writer. Call `write_cansas1d_xml` or
+Do not assume `i_rel` is present. Call `write_cansas1d_xml` or
 `write_nxcansas_h5` only after a validated calibration has established the
 absolute intensity, uncertainty, units, and provenance.
 
@@ -149,8 +157,11 @@ for parameters. Required inputs are shown in angle brackets:
 saxsabs norm-factor --mon <counts> --trans <0<T<=1> --mode <rate|integrated> [--exp <seconds>]
 saxsabs parse-header --header-json <path>
 saxsabs parse-external1d --input <path>
-saxsabs estimate-k --meas <path> --ref <path> [--q-col <name>] [--i-col <name>]
+saxsabs estimate-k --meas <path> [--ref <path>] [--q-col <name>] [--i-col <name>]
                     [--ref-q-col <name>] [--ref-i-col <name>] [--qmin <value>] [--qmax <value>]
+                    [--intensity-state relative] [--thickness-cm <cm>]
+saxsabs subtract-buffer --sample <path> --buffer <path> [--alpha <value>]
+                    [--alpha-uncertainty <value>]
 saxsabs bl19b2-abs2d --input-root <path> (--poni <path>|--pydidas-cali-yaml <path>)
                          (--mu <cm^-1>|--sample-thickness-cm <cm>)
                          --monitor-mode <rate|integrated> [workflow options]
@@ -165,7 +176,8 @@ The main commands are:
 | `norm-factor` | exposure, monitor, transmission, mode | normalization value |
 | `parse-header` | header JSON | extracted exposure/monitor/transmission JSON |
 | `parse-external1d` | profile path | parsed-profile summary JSON |
-| `estimate-k` | measured and reference tabular profiles | K-factor result JSON |
+| `estimate-k` | relative measured profile; optional reference (built-in SRM 3600 if omitted); optional `--thickness-cm` | K-factor result JSON |
+| `subtract-buffer` | absolute sample and buffer profiles with cm⁻¹ units | subtraction diagnostic JSON |
 | `bl19b2-abs2d` | explicit BL19B2 inputs and semantics | batch result JSON and requested files |
 | `bl19b2-abs2d-v1-legacy` | explicit migration choices | legacy-compatible batch result with documented assumptions |
 
@@ -179,4 +191,5 @@ These APIs provide software operations and checks; they do not establish that a
 beamline measurement is calibrated. Users remain responsible for appropriate
 reference standards, independently measured inputs, detector geometry, valid
 units, and experiment-specific acceptance. The included synthetic 2D example
-tests arithmetic and interoperability, not experimental beamline validation.
+recovers a planted $K$ and sample curve and checks labeled file content; it is
+not experimental beamline validation.

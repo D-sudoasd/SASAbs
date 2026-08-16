@@ -1,6 +1,6 @@
 """Command-line interface for headless SAXS calibration operations.
 
-Provides six subcommands: four small utilities plus the safe BL19B2 workflow
+Provides seven subcommands: five small utilities plus the safe BL19B2 workflow
 and its explicit v1 migration entry.
 """
 
@@ -15,9 +15,16 @@ import sys
 import pandas as pd
 
 from . import __version__
-from .core.normalization import compute_norm_factor
+from .core.buffer_subtraction import subtract_buffer
 from .core.calibration import estimate_k_factor_robust
-from .io.parsers import parse_header_values, read_external_1d_profile
+from .core.intensity_state import require_relative_input_for_absolute_scaling
+from .core.normalization import compute_norm_factor
+from .io.parsers import (
+    parse_header_values,
+    profile_intensity,
+    profile_uncertainty,
+    read_external_1d_profile,
+)
 
 
 def _die(message: str) -> None:
@@ -110,10 +117,9 @@ def _read_profile_for_estimate(
     q_col: str | None,
     i_col: str | None,
     profile_label: str,
-) -> tuple[object, object]:
+) -> dict[str, object]:
     if q_col is None and i_col is None:
-        parsed = read_external_1d_profile(path)
-        return parsed["x"], parsed["i_rel"]
+        return read_external_1d_profile(path)
 
     df = _read_tabular_dataframe(path)
     columns = list(df.columns)
@@ -122,7 +128,26 @@ def _read_profile_for_estimate(
 
     q = pd.to_numeric(df[resolved_q_col], errors="coerce").to_numpy(dtype=float)
     intensity = pd.to_numeric(df[resolved_i_col], errors="coerce").to_numpy(dtype=float)
-    return q, intensity
+    profile = read_external_1d_profile(path)
+    profile["x"] = q
+    profile["intensity"] = intensity
+    profile["i_col"] = str(resolved_i_col)
+    profile["x_col"] = str(resolved_q_col)
+    return profile
+
+
+def _apply_declared_intensity_state(
+    profile: dict[str, object],
+    declared_state: str | None,
+) -> dict[str, object]:
+    if not declared_state:
+        return profile
+    provenance = dict(profile.get("operator_provenance") or {})
+    provenance["intensity_state"] = declared_state
+    updated = dict(profile)
+    updated["operator_provenance"] = provenance
+    updated["intensity_state"] = declared_state
+    return updated
 
 
 def _add_bl19b2_arguments(
@@ -315,14 +340,49 @@ def build_parser() -> argparse.ArgumentParser:
     p_profile.add_argument("--input", required=True, type=Path)
 
     p_k = sub.add_parser("estimate-k", help="Estimate robust K-factor from measured and reference CSV")
-    p_k.add_argument("--meas", required=True, type=Path, help="Measured profile CSV with columns q,i")
-    p_k.add_argument("--ref", required=True, type=Path, help="Reference profile CSV with columns q,i")
+    p_k.add_argument(
+        "--meas",
+        required=True,
+        type=Path,
+        help="Measured profile on the same intensity scale as the reference (cm^-1 for SRM 3600)",
+    )
+    p_k.add_argument(
+        "--ref",
+        default=None,
+        type=Path,
+        help="Reference profile CSV; omit to use the built-in NIST SRM 3600 curve",
+    )
     p_k.add_argument("--q-col", default=None, help="Measured q column override")
     p_k.add_argument("--i-col", default=None, help="Measured intensity column override")
     p_k.add_argument("--ref-q-col", default=None, help="Reference q column override")
     p_k.add_argument("--ref-i-col", default=None, help="Reference intensity column override")
     p_k.add_argument("--qmin", type=float, default=0.01)
     p_k.add_argument("--qmax", type=float, default=0.2)
+    p_k.add_argument(
+        "--intensity-state",
+        default=None,
+        help="Declare measured intensity_state when the file has no provenance "
+        "(relative required for K estimation)",
+    )
+    p_k.add_argument(
+        "--thickness-cm",
+        type=float,
+        default=None,
+        help=(
+            "Standard thickness in cm used to convert measured intensity to cm^-1 "
+            "before K estimation. Workbench Tab 1 enters millimetres "
+            "(1.055 mm = 0.1055 cm)."
+        ),
+    )
+
+    p_sub = sub.add_parser(
+        "subtract-buffer",
+        help="Subtract an absolute buffer from an absolute sample profile",
+    )
+    p_sub.add_argument("--sample", required=True, type=Path)
+    p_sub.add_argument("--buffer", required=True, type=Path)
+    p_sub.add_argument("--alpha", type=float, default=1.0)
+    p_sub.add_argument("--alpha-uncertainty", type=float, default=None)
 
     p_bl = sub.add_parser(
         "bl19b2-abs2d",
@@ -374,6 +434,7 @@ def main() -> None:
                     "x_col": result["x_col"],
                     "i_col": result["i_col"],
                     "err_col": result["err_col"],
+                    "intensity_state": result.get("intensity_state"),
                 },
                 ensure_ascii=False,
             )
@@ -382,25 +443,51 @@ def main() -> None:
 
     if args.command == "estimate-k":
         try:
-            q_meas, i_meas = _read_profile_for_estimate(
-                args.meas,
-                q_col=args.q_col,
-                i_col=args.i_col,
-                profile_label="measured",
+            measured = _apply_declared_intensity_state(
+                _read_profile_for_estimate(
+                    args.meas,
+                    q_col=args.q_col,
+                    i_col=args.i_col,
+                    profile_label="measured",
+                ),
+                args.intensity_state,
             )
-            q_ref, i_ref = _read_profile_for_estimate(
-                args.ref,
-                q_col=args.ref_q_col,
-                i_col=args.ref_i_col,
-                profile_label="reference",
+            assessment = require_relative_input_for_absolute_scaling(
+                measured, profile_name=str(args.meas)
             )
-            out = estimate_k_factor_robust(
-                q_meas=q_meas,
-                i_meas_per_cm=i_meas,
-                q_ref=q_ref,
-                i_ref=i_ref,
-                q_window=(args.qmin, args.qmax),
-            )
+            i_meas = profile_intensity(measured)
+            if args.thickness_cm is not None:
+                thickness_cm = float(args.thickness_cm)
+                if not math.isfinite(thickness_cm) or thickness_cm <= 0:
+                    raise ValueError("--thickness-cm must be finite and > 0")
+                if "thickness" in assessment.corrections_applied:
+                    raise ValueError(
+                        "measured profile already records thickness; "
+                        "refuse a second --thickness-cm"
+                    )
+                i_meas = i_meas / thickness_cm
+            if args.ref is None:
+                if args.ref_q_col is not None or args.ref_i_col is not None:
+                    raise ValueError("--ref-q-col and --ref-i-col require --ref")
+                out = estimate_k_factor_robust(
+                    q_meas=measured["x"],
+                    i_meas_per_cm=i_meas,
+                    q_window=(args.qmin, args.qmax),
+                )
+            else:
+                reference = _read_profile_for_estimate(
+                    args.ref,
+                    q_col=args.ref_q_col,
+                    i_col=args.ref_i_col,
+                    profile_label="reference",
+                )
+                out = estimate_k_factor_robust(
+                    q_meas=measured["x"],
+                    i_meas_per_cm=i_meas,
+                    q_ref=reference["x"],
+                    i_ref=profile_intensity(reference),
+                    q_window=(args.qmin, args.qmax),
+                )
         except ValueError as exc:
             _die(f"estimate-k failed: {exc}")
         print(
@@ -419,6 +506,38 @@ def main() -> None:
                     "q_max_overlap": out.q_max_overlap,
                     "points_used": out.points_used,
                     "points_total": out.points_total,
+                },
+                ensure_ascii=False,
+            )
+        )
+        return
+
+    if args.command == "subtract-buffer":
+        try:
+            sample = read_external_1d_profile(args.sample)
+            buffer_profile = read_external_1d_profile(args.buffer)
+            result = subtract_buffer(
+                sample["x"],
+                profile_intensity(sample),
+                profile_uncertainty(sample),
+                buffer_profile["x"],
+                profile_intensity(buffer_profile),
+                profile_uncertainty(buffer_profile),
+                alpha=args.alpha,
+                alpha_uncertainty=args.alpha_uncertainty,
+                sample_profile=sample,
+                buffer_profile=buffer_profile,
+            )
+        except ValueError as exc:
+            _die(f"subtract-buffer failed: {exc}")
+        print(
+            json.dumps(
+                {
+                    "points": int(result.q.size),
+                    "alpha": result.alpha,
+                    "alpha_uncertainty": result.alpha_uncertainty,
+                    "high_q_residual_mean": result.high_q_residual_mean,
+                    "high_q_check_passed": result.high_q_check_passed,
                 },
                 ensure_ascii=False,
             )
@@ -475,7 +594,8 @@ def main() -> None:
                 calibration_background_monitor_relative_standard_uncertainty=(
                     args.calibration_background_monitor_relative_standard_uncertainty
                 ),
-                system_coverage_factor=args.system_coverage_factor,                mu_relative_standard_uncertainty=args.mu_relative_standard_uncertainty,
+                system_coverage_factor=args.system_coverage_factor,
+                mu_relative_standard_uncertainty=args.mu_relative_standard_uncertainty,
                 alpha_standard_uncertainty=args.alpha_standard_uncertainty,
                 alpha=args.alpha,
                 q_window=(args.qmin, args.qmax),

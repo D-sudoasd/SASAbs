@@ -242,7 +242,7 @@ def test_tab3_profile_parser_prefers_combined_over_earlier_statistical_column(
     profile = app.read_external_1d_profile(profile_path)
 
     assert profile["err_col"] == "Error_CombinedStandard_cm^-1"
-    np.testing.assert_allclose(profile["err_rel"], [1.5, 2.5, 3.5])
+    np.testing.assert_allclose(profile["uncertainty"], [1.5, 2.5, 3.5])
 
 
 def test_tab3_formal_external_profile_requires_matching_operator_provenance(tmp_path):
@@ -1288,13 +1288,23 @@ def test_tab3_workbench_parser_roundtrips_cansas_xml(tmp_path):
     q = np.array([0.01, 0.02, 0.03])
     intensity = np.array([10.0, 9.0, 8.0])
     error = np.array([0.1, 0.2, 0.3])
-    module.write_cansas1d_xml(output, q, intensity, error)
+    module.write_cansas1d_xml(
+        output,
+        q,
+        intensity,
+        error,
+        metadata={
+            "intensity_state": "absolute_cm^-1",
+            "intensity_unit": "1/cm",
+        },
+    )
 
     profile = app.read_external_1d_profile(output)
 
     np.testing.assert_allclose(profile["x"], q)
-    np.testing.assert_allclose(profile["i_rel"], intensity)
-    np.testing.assert_allclose(profile["err_rel"], error)
+    np.testing.assert_allclose(profile["i_abs"], intensity)
+    np.testing.assert_allclose(profile["err_abs"], error)
+    assert "i_rel" not in profile
     assert profile["x_col"] == "Q"
     assert profile["i_col"] == "I"
     assert profile["err_col"] == "Idev"
@@ -1607,7 +1617,7 @@ def test_tab3_run_preloads_buffer_once_and_reports_provenance(tmp_path):
 
     sample_output = tmp_path / "output" / "processed_external_1d_abs" / "sample_a.dat"
     output_profile = app.read_external_1d_profile(sample_output)
-    assert output_profile["i_rel"][0] == pytest.approx(24.5)
+    assert output_profile["i_abs"][0] == pytest.approx(24.5)
     assert output_profile["operator_provenance"]["buffer_alpha"] == "0.5"
     assert output_profile["operator_provenance"]["buffer_alpha_uncertainty"] == "0.05"
     assert output_profile["operator_provenance"]["buffer_source_name"] == "buffer.dat"
@@ -1828,7 +1838,7 @@ def test_buffer_combined_uncertainty_and_provenance_roundtrip_all_formats(
     )
 
     profile = app.read_external_1d_profile(written)
-    np.testing.assert_allclose(profile["err_rel"], combined)
+    np.testing.assert_allclose(profile["err_abs"], combined)
     provenance = profile["operator_provenance"]
     assert provenance["buffer_source_name"] == "buffer.dat"
     assert provenance["buffer_source_sha256"] == "a" * 64
@@ -1872,7 +1882,7 @@ def test_unknown_buffer_alpha_uncertainty_stays_unknown_all_formats(
     )
 
     profile = app.read_external_1d_profile(written)
-    assert np.all(np.isnan(profile["err_rel"]))
+    assert np.all(np.isnan(profile["err_abs"]))
     provenance = profile["operator_provenance"]
     assert provenance["buffer_source_name"] == "buffer.dat"
     assert provenance["buffer_source_sha256"] == "b" * 64

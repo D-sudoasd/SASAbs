@@ -9,6 +9,22 @@ from saxsabs.core.buffer_subtraction import (
     validate_alpha,
 )
 
+ABS_PROFILE = {
+    "intensity_state": "absolute_cm^-1",
+    "intensity_unit": "1/cm",
+    "i_col": "I_abs_cm^-1",
+    "operator_provenance": {
+        "intensity_state": "absolute_cm^-1",
+        "corrections_applied": '["k","thickness"]',
+    },
+}
+
+
+def _sub(*args, **kwargs):
+    kwargs.setdefault("sample_profile", ABS_PROFILE)
+    kwargs.setdefault("buffer_profile", ABS_PROFILE)
+    return subtract_buffer(*args, **kwargs)
+
 
 class TestSubtractBuffer:
     def _make_data(self, n=100):
@@ -21,7 +37,7 @@ class TestSubtractBuffer:
 
     def test_basic_subtraction(self):
         q, i_s, e_s, i_b, e_b = self._make_data()
-        result = subtract_buffer(q, i_s, e_s, q, i_b, e_b, alpha=1.0)
+        result = _sub(q, i_s, e_s, q, i_b, e_b, alpha=1.0)
         assert isinstance(result, BufferSubtractionResult)
         expected = i_s - i_b
         np.testing.assert_allclose(result.i_subtracted, expected, rtol=1e-10)
@@ -29,14 +45,14 @@ class TestSubtractBuffer:
     def test_alpha_scaling(self):
         q, i_s, e_s, i_b, e_b = self._make_data()
         alpha = 0.9
-        result = subtract_buffer(q, i_s, e_s, q, i_b, e_b, alpha=alpha)
+        result = _sub(q, i_s, e_s, q, i_b, e_b, alpha=alpha)
         expected = i_s - alpha * i_b
         np.testing.assert_allclose(result.i_subtracted, expected, rtol=1e-10)
 
     def test_error_propagation(self):
         q, i_s, e_s, i_b, e_b = self._make_data()
         alpha = 1.0
-        result = subtract_buffer(
+        result = _sub(
             q,
             i_s,
             e_s,
@@ -53,7 +69,7 @@ class TestSubtractBuffer:
     def test_missing_alpha_uncertainty_keeps_combined_uncertainty_unknown(self):
         q, i_s, e_s, i_b, e_b = self._make_data(n=5)
 
-        result = subtract_buffer(q, i_s, e_s, q, i_b, e_b)
+        result = _sub(q, i_s, e_s, q, i_b, e_b)
 
         assert result.alpha_uncertainty is None
         expected_statistical = np.sqrt(e_s**2 + e_b**2)
@@ -68,7 +84,7 @@ class TestSubtractBuffer:
         else:
             e_b = None
 
-        result = subtract_buffer(
+        result = _sub(
             q, i_s, e_s, q, i_b, e_b, alpha_uncertainty=0.0
         )
 
@@ -78,7 +94,7 @@ class TestSubtractBuffer:
         q, i_s, e_s, i_b, e_b = self._make_data(n=5)
         e_s[2] = np.nan
 
-        result = subtract_buffer(
+        result = _sub(
             q, i_s, e_s, q, i_b, e_b, alpha_uncertainty=0.0
         )
 
@@ -88,7 +104,7 @@ class TestSubtractBuffer:
     def test_interpolated_error_propagates_variance_with_squared_weights(self):
         q_s = np.array([1.0])
         q_b = np.array([0.0, 2.0])
-        result = subtract_buffer(
+        result = _sub(
             q_s,
             np.array([10.0]),
             np.array([0.4]),
@@ -103,7 +119,7 @@ class TestSubtractBuffer:
 
     def test_alpha_uncertainty_is_propagated_from_buffer_intensity(self):
         q = np.array([0.01, 0.02, 0.03])
-        result = subtract_buffer(
+        result = _sub(
             q,
             np.full(3, 10.0),
             np.full(3, 0.1),
@@ -123,7 +139,7 @@ class TestSubtractBuffer:
     def test_invalid_alpha_uncertainty_raises(self, alpha_uncertainty):
         q, i_s, e_s, i_b, e_b = self._make_data(n=5)
         with pytest.raises(ValueError, match="alpha_uncertainty"):
-            subtract_buffer(
+            _sub(
                 q,
                 i_s,
                 e_s,
@@ -141,7 +157,7 @@ class TestSubtractBuffer:
         i_b = np.ones(200) * 3.0
         err_s = np.full(n, 0.1)
         err_b = np.full(200, 0.05)
-        result = subtract_buffer(q_s, i_s, err_s, q_b, i_b, err_b, alpha=1.0)
+        result = _sub(q_s, i_s, err_s, q_b, i_b, err_b, alpha=1.0)
         assert result.q.shape == q_s.shape
         np.testing.assert_allclose(result.i_subtracted, 7.0, atol=0.1)
 
@@ -150,7 +166,7 @@ class TestSubtractBuffer:
         q_b = np.array([0.099999, 0.200001, 0.300001])
         i_b = 1.0e9 * q_b
 
-        result = subtract_buffer(
+        result = _sub(
             q_s,
             np.zeros(3),
             np.zeros(3),
@@ -171,7 +187,7 @@ class TestSubtractBuffer:
         err_b = np.full(3, 0.05)
 
         try:
-            subtract_buffer(q_s, i_s, err_s, q_b, i_b, err_b, alpha=1.0)
+            _sub(q_s, i_s, err_s, q_b, i_b, err_b, alpha=1.0)
         except ValueError as exc:
             assert "outside buffer q range" in str(exc)
         else:
@@ -192,7 +208,7 @@ class TestSubtractBuffer:
         i_b = np.ones(3) * 2.0
 
         with pytest.raises(ValueError, match=message):
-            subtract_buffer(q, i_s, err_sample, q, i_b, err_buffer, alpha=1.0)
+            _sub(q, i_s, err_sample, q, i_b, err_buffer, alpha=1.0)
 
 
 class TestValidateAlpha:
@@ -218,7 +234,7 @@ class TestValidateAlpha:
 
 def test_subtract_buffer_preserves_legacy_positional_high_q_window():
     q = np.array([0.10, 0.20, 0.30], dtype=float)
-    result = subtract_buffer(
+    result = _sub(
         q,
         np.array([3.0, 3.0, 3.0]),
         np.zeros(3),
@@ -246,4 +262,10 @@ def test_subtract_buffer_rejects_infinite_uncertainty(field):
     kwargs[field][1] = np.inf
 
     with pytest.raises(ValueError, match=field):
-        subtract_buffer(**kwargs)
+        _sub(**kwargs)
+
+
+def test_subtract_buffer_refuses_unlabeled_profiles():
+    q = np.array([0.01, 0.02, 0.03])
+    with pytest.raises(ValueError, match="sample_profile and buffer_profile"):
+        subtract_buffer(q, np.ones(3), np.ones(3), q, np.ones(3), np.ones(3))

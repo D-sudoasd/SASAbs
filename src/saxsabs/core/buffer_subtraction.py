@@ -14,9 +14,12 @@ Jacques, D.A. & Trewhella, J. (2010).  *Protein Science* **19**, 642–657.
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 import numpy as np
+
+from saxsabs.core.intensity_state import require_absolute_input_for_buffer_subtraction
 
 logger = logging.getLogger(__name__)
 
@@ -197,6 +200,8 @@ def subtract_buffer(
     high_q_diag: tuple[float, float] = (0.15, 0.25),
     *,
     alpha_uncertainty: float | None = None,
+    sample_profile: Mapping[str, object] | None = None,
+    buffer_profile: Mapping[str, object] | None = None,
 ) -> BufferSubtractionResult:
     """Subtract a buffer/solvent curve from a sample curve.
 
@@ -217,11 +222,25 @@ def subtract_buffer(
         explicitly treated as exact.
     high_q_diag : tuple[float, float]
         *q* window for the high-*q* residual check.
+    sample_profile, buffer_profile
+        Intensity-state provenance for each curve.  Both are required; unlabeled
+        arrays are refused.
 
     Returns
     -------
     BufferSubtractionResult
     """
+    if sample_profile is None or buffer_profile is None:
+        raise ValueError(
+            "subtract_buffer requires sample_profile and buffer_profile with "
+            "explicit absolute_cm^-1 intensity_state and a cm^-1 intensity_unit"
+        )
+    require_absolute_input_for_buffer_subtraction(
+        sample_profile, profile_name="sample"
+    )
+    require_absolute_input_for_buffer_subtraction(
+        buffer_profile, profile_name="buffer"
+    )
     validate_alpha(alpha)
     try:
         q_lo, q_hi = (float(value) for value in high_q_diag)

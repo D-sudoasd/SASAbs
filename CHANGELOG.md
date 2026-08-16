@@ -2,6 +2,24 @@
 
 ## [2.0.0] - Unreleased
 
+### JOSS reviewer polish (2026-08-16)
+
+- Make `saxsabs estimate-k --ref` optional so the CLI can use the same built-in
+  NIST SRM 3600 curve as the Python API; reject `--ref-q-col`/`--ref-i-col`
+  without `--ref`.
+- Gate CLI `estimate-k` and `subtract-buffer` (and the `minimal_2d` example)
+  through the intensity-state contract; refuse unlabeled intensity before $K$.
+- Add `estimate-k --thickness-cm` (centimetres; Workbench Tab 1 remains mm) and
+  a `subtract-buffer` subcommand.
+- Stamp `1/cm` only when writers receive `absolute_cm^-1` plus an explicit
+  cm$^{-1}$ unit; readers expose `i_abs`/`i_rel` only for those assessed states.
+  A unitless metadata label `absolute` is ambiguous, not cm$^{-1}$.
+- Point README and paper at the unreleased 2.0.0 tree on `main`, not GitHub
+  Release v1.1.1. Record canSAS XSD / punx checks as offline 2026-08-15, not CI.
+- Tighten the paper's K-estimator, interface-equivalence, and `minimal_2d`
+  claims, and remove stale Draft-PR #1 merge instructions from the README and
+  readiness notes.
+
 ### Submission-candidate hardening (2026-08-12)
 
 - Require finite positive inherited `thickness_cm` and a non-empty

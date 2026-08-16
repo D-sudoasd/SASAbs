@@ -9,6 +9,16 @@ from saxsabs.io.writers import write_cansas1d_xml, write_nxcansas_h5
 from saxsabs.io.parsers import read_cansas1d_xml, read_external_1d_profile
 
 
+ABS_META = {
+    "intensity_state": "absolute_cm^-1",
+    "intensity_unit": "1/cm",
+}
+
+
+def _meta(**extra):
+    return {**ABS_META, **extra}
+
+
 # ---------------------------------------------------------------------------
 # canSAS 1D XML round-trip
 # ---------------------------------------------------------------------------
@@ -22,20 +32,21 @@ class TestCanSAS1DXML:
     def test_write_read_roundtrip(self, tmp_path):
         q, i_abs, err = self._make_data()
         xml_path = tmp_path / "test.xml"
-        write_cansas1d_xml(xml_path, q, i_abs, err, metadata={"title": "round-trip test"})
+        write_cansas1d_xml(xml_path, q, i_abs, err, metadata=_meta(title="round-trip test"))
         assert xml_path.exists()
 
         result = read_cansas1d_xml(xml_path)
-        assert "x" in result
-        assert "i_rel" in result
+        assert "i_abs" in result
+        assert "i_rel" not in result
+        assert result["intensity_state"] == "absolute_cm^-1"
         np.testing.assert_allclose(result["x"], q, rtol=1e-6)
-        np.testing.assert_allclose(result["i_rel"], i_abs, rtol=1e-6)
-        np.testing.assert_allclose(result["err_rel"], err, rtol=1e-6)
+        np.testing.assert_allclose(result["i_abs"], i_abs, rtol=1e-6)
+        np.testing.assert_allclose(result["err_abs"], err, rtol=1e-6)
 
     def test_write_no_error(self, tmp_path):
         q, i_abs, _ = self._make_data()
         xml_path = tmp_path / "no_err.xml"
-        write_cansas1d_xml(xml_path, q, i_abs)
+        write_cansas1d_xml(xml_path, q, i_abs, metadata=ABS_META)
         result = read_cansas1d_xml(xml_path)
         np.testing.assert_allclose(result["x"], q, rtol=1e-6)
 
@@ -43,9 +54,11 @@ class TestCanSAS1DXML:
         """read_external_1d_profile should auto-detect .xml files."""
         q, i_abs, err = self._make_data()
         xml_path = tmp_path / "auto.xml"
-        write_cansas1d_xml(xml_path, q, i_abs, err)
+        write_cansas1d_xml(xml_path, q, i_abs, err, metadata=ABS_META)
         result = read_external_1d_profile(str(xml_path))
         np.testing.assert_allclose(result["x"], q, rtol=1e-6)
+        assert "i_abs" in result
+        assert "i_rel" not in result
 
     def test_metadata_preserved(self, tmp_path):
         q, i_abs, err = self._make_data(10)
@@ -57,14 +70,14 @@ class TestCanSAS1DXML:
             "sdd_m": 2.0,
             "sample_name": "glass",
         }
-        out = write_cansas1d_xml(xml_path, q, i_abs, err, metadata=meta)
+        out = write_cansas1d_xml(xml_path, q, i_abs, err, metadata=_meta(**meta))
         assert out == xml_path
 
     def test_write_includes_schema_required_notes(self, tmp_path):
         q, i_abs, err = self._make_data(3)
         xml_path = tmp_path / "schema-required-notes.xml"
 
-        write_cansas1d_xml(xml_path, q, i_abs, err)
+        write_cansas1d_xml(xml_path, q, i_abs, err, metadata=ABS_META)
 
         namespace = {"cansas": "urn:cansas1d:1.1"}
         root = ET.parse(xml_path).getroot()
@@ -83,24 +96,44 @@ class TestCanSAS1DXML:
             q,
             i_abs,
             err,
-            metadata={
-                "thickness_cm": "0.1",
-                "thickness_source": "upstream sample cell record",
-            },
+            metadata=_meta(
+                thickness_cm="0.1",
+                thickness_source="upstream sample cell record",
+            ),
         )
         provenance = read_cansas1d_xml(xml_path)["operator_provenance"]
         assert provenance["thickness_cm"] == "0.1"
         assert provenance["thickness_source"] == "upstream sample cell record"
 
+    def test_write_refuses_unlabeled_intensity(self, tmp_path):
+        q, i_abs, err = self._make_data(3)
+        with pytest.raises(ValueError, match="intensity_state=absolute_cm\\^-1"):
+            write_cansas1d_xml(tmp_path / "unlabeled.xml", q, i_abs, err)
+
+    def test_write_refuses_unitless_absolute_label(self, tmp_path):
+        q, i_abs, err = self._make_data(3)
+        with pytest.raises(ValueError, match="absolute_cm\\^-1|cm\\^-1 intensity_unit"):
+            write_cansas1d_xml(
+                tmp_path / "unitless.xml",
+                q,
+                i_abs,
+                err,
+                metadata={"intensity_state": "absolute"},
+            )
+
     def test_write_shape_mismatch_raises(self, tmp_path):
         xml_path = tmp_path / "bad.xml"
         try:
-            write_cansas1d_xml(xml_path, np.array([0.1, 0.2, 0.3]), np.array([10.0, 9.0]))
+            write_cansas1d_xml(
+                xml_path,
+                np.array([0.1, 0.2, 0.3]),
+                np.array([10.0, 9.0]),
+                metadata=ABS_META,
+            )
         except ValueError as exc:
             assert "same shape" in str(exc)
         else:
             raise AssertionError("Expected ValueError for mismatched q/i shapes")
-
 
     @pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
     def test_write_rejects_nonfinite_q(self, tmp_path, bad_value):
@@ -109,6 +142,7 @@ class TestCanSAS1DXML:
                 tmp_path / "bad-q.xml",
                 np.array([0.1, bad_value]),
                 np.array([10.0, 9.0]),
+                metadata=ABS_META,
             )
 
     @pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
@@ -118,8 +152,8 @@ class TestCanSAS1DXML:
                 tmp_path / "bad-i.xml",
                 np.array([0.1, 0.2]),
                 np.array([10.0, bad_value]),
+                metadata=ABS_META,
             )
-
 
 
 # ---------------------------------------------------------------------------
@@ -139,21 +173,24 @@ class TestNXcanSASHDF5:
     def test_write_read_roundtrip(self, tmp_path):
         q, i_abs, err = self._make_data()
         h5_path = tmp_path / "test.h5"
-        write_nxcansas_h5(h5_path, q, i_abs, err, metadata={"title": "h5 round-trip"})
+        write_nxcansas_h5(h5_path, q, i_abs, err, metadata=_meta(title="h5 round-trip"))
         assert h5_path.exists()
 
         result = read_nxcansas_h5(h5_path)
+        assert "i_abs" in result
+        assert "i_rel" not in result
         np.testing.assert_allclose(result["x"], q, rtol=1e-10)
-        np.testing.assert_allclose(result["i_rel"], i_abs, rtol=1e-10)
-        np.testing.assert_allclose(result["err_rel"], err, rtol=1e-10)
+        np.testing.assert_allclose(result["i_abs"], i_abs, rtol=1e-10)
+        np.testing.assert_allclose(result["err_abs"], err, rtol=1e-10)
 
     def test_auto_detect_h5_extension(self, tmp_path):
         """read_external_1d_profile should auto-detect .h5 files."""
         q, i_abs, err = self._make_data()
         h5_path = tmp_path / "auto.h5"
-        write_nxcansas_h5(h5_path, q, i_abs, err)
+        write_nxcansas_h5(h5_path, q, i_abs, err, metadata=ABS_META)
         result = read_external_1d_profile(str(h5_path))
         np.testing.assert_allclose(result["x"], q, rtol=1e-10)
+        assert "i_abs" in result
 
     def test_inherited_thickness_provenance_roundtrip(self, tmp_path):
         q, i_abs, err = self._make_data(10)
@@ -163,10 +200,10 @@ class TestNXcanSASHDF5:
             q,
             i_abs,
             err,
-            metadata={
-                "thickness_cm": "0.1",
-                "thickness_source": "upstream sample cell record",
-            },
+            metadata=_meta(
+                thickness_cm="0.1",
+                thickness_source="upstream sample cell record",
+            ),
         )
         provenance = read_nxcansas_h5(h5_path)["operator_provenance"]
         assert provenance["thickness_cm"] == "0.1"
@@ -179,6 +216,7 @@ class TestNXcanSASHDF5:
                 tmp_path / "bad-q.h5",
                 np.array([0.1, bad_value]),
                 np.array([10.0, 9.0]),
+                metadata=ABS_META,
             )
 
     @pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
@@ -188,25 +226,35 @@ class TestNXcanSASHDF5:
                 tmp_path / "bad-i.h5",
                 np.array([0.1, 0.2]),
                 np.array([10.0, bad_value]),
+                metadata=ABS_META,
             )
-
 
     def test_no_error_dataset(self, tmp_path):
         q, i_abs, _ = self._make_data()
         h5_path = tmp_path / "no_err.h5"
-        write_nxcansas_h5(h5_path, q, i_abs)
+        write_nxcansas_h5(h5_path, q, i_abs, metadata=ABS_META)
         result = read_nxcansas_h5(h5_path)
         np.testing.assert_allclose(result["x"], q, rtol=1e-10)
-        assert np.all(np.isnan(result["err_rel"]))
+        assert np.all(np.isnan(result["err_abs"]))
 
     def test_write_shape_mismatch_raises(self, tmp_path):
         h5_path = tmp_path / "bad.h5"
         try:
-            write_nxcansas_h5(h5_path, np.array([0.1, 0.2, 0.3]), np.array([10.0, 9.0]))
+            write_nxcansas_h5(
+                h5_path,
+                np.array([0.1, 0.2, 0.3]),
+                np.array([10.0, 9.0]),
+                metadata=ABS_META,
+            )
         except ValueError as exc:
             assert "same shape" in str(exc)
         else:
             raise AssertionError("Expected ValueError for mismatched q/i shapes")
+
+    def test_write_refuses_unlabeled_intensity(self, tmp_path):
+        q, i_abs, err = self._make_data(3)
+        with pytest.raises(ValueError, match="intensity_state=absolute_cm\\^-1"):
+            write_nxcansas_h5(tmp_path / "unlabeled.h5", q, i_abs, err)
 
     def test_reader_rejects_malformed_dataset_lengths(self, tmp_path):
         h5_path = tmp_path / "malformed.h5"
