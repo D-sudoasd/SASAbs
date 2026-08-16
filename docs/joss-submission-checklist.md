@@ -45,6 +45,9 @@ accessed 16 August 2026:
       embed a self-referential commit hash in this tracked checklist.
 - [ ] Verify that the public repository description, homepage concept DOI,
       visible README, and submitted branch identify the same candidate.
+- [ ] Run `scripts/check_public_candidate.py` against the completed confirmation
+      JSON and retain its PASS output. If the paper is not on `main`, post the
+      reported `branch-where-paper-is` command in the JOSS pre-review issue.
 
 ## Paper
 

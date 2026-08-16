@@ -116,6 +116,7 @@ bibliography: paper.bib
                 "ai_disclosure_confirmed": True,
                 "funding_and_coi_confirmed": True,
                 "ci_run_url": "https://github.com/D-sudoasd/SASAbs/actions/runs/12345",
+                "submitted_branch": "joss-submission",
                 "submitted_commit": "a" * 40,
                 "confirmed_on": "2026-08-26",
                 "research_evidence_reference": "editor-visible workflow record 2026-08-20",
@@ -182,6 +183,72 @@ def test_strict_gate_passes_with_complete_evidence_record(tmp_path, monkeypatch,
 
     monkeypatch.setattr(readiness, "current_date", lambda: readiness.date(2026, 8, 26))
     assert readiness.main() == 0
+
+
+def test_strict_gate_accepts_confirmed_main_after_merge(tmp_path, monkeypatch):
+    confirmations = _minimal_ready_repository(tmp_path)
+    payload = json.loads(confirmations.read_text(encoding="utf-8"))
+    payload["submitted_branch"] = "main"
+    payload["submitted_commit"] = "c" * 40
+    confirmations.write_text(json.dumps(payload), encoding="utf-8")
+
+    monkeypatch.setattr(readiness, "ROOT", tmp_path)
+    monkeypatch.setattr(readiness, "PAPER", tmp_path / "paper" / "paper.md")
+    monkeypatch.setattr(readiness, "paper_word_count", lambda: 900)
+    monkeypatch.setattr(readiness, "current_date", lambda: readiness.date(2026, 8, 26))
+
+    def main_git_output(*arguments: str) -> str | None:
+        values = {
+            ("branch", "--show-current"): "main",
+            ("rev-parse", "HEAD"): "c" * 40,
+            ("status", "--porcelain=v1", "--untracked-files=all"): "",
+        }
+        return values.get(arguments)
+
+    monkeypatch.setattr(readiness, "git_output", main_git_output)
+    monkeypatch.setattr(
+        readiness.sys,
+        "argv",
+        [
+            "check_submission_readiness.py",
+            "--as-of",
+            "2026-08-26",
+            "--manual-confirmations",
+            str(confirmations),
+        ],
+    )
+
+    assert readiness.main() == 0
+
+
+def test_strict_gate_rejects_branch_not_confirmed(tmp_path, monkeypatch, capsys):
+    confirmations = _minimal_ready_repository(tmp_path)
+    payload = json.loads(confirmations.read_text(encoding="utf-8"))
+    payload["submitted_branch"] = "main"
+    confirmations.write_text(json.dumps(payload), encoding="utf-8")
+
+    monkeypatch.setattr(readiness, "ROOT", tmp_path)
+    monkeypatch.setattr(readiness, "PAPER", tmp_path / "paper" / "paper.md")
+    monkeypatch.setattr(readiness, "paper_word_count", lambda: 900)
+    monkeypatch.setattr(readiness, "current_date", lambda: readiness.date(2026, 8, 26))
+    _mock_clean_git(monkeypatch)
+    monkeypatch.setattr(
+        readiness.sys,
+        "argv",
+        [
+            "check_submission_readiness.py",
+            "--as-of",
+            "2026-08-26",
+            "--manual-confirmations",
+            str(confirmations),
+        ],
+    )
+
+    assert readiness.main() == 1
+    assert (
+        "current branch 'joss-submission' does not match confirmed submitted branch 'main'"
+        in capsys.readouterr().out
+    )
 
 
 def test_strict_gate_rejects_missing_evidence_record(tmp_path, monkeypatch, capsys):

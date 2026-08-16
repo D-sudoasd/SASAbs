@@ -78,7 +78,10 @@ Writing - original draft, and Writing - review & editing.
   submitted branch, and visible README all match that commit:
 - Confirmation date (`YYYY-MM-DD`, matching the paper submission date):
 - Research-evidence reference retained for editorial verification:
-- Confirmed commit is the current clean `joss-submission` HEAD:
+- Submitted branch recorded in the confirmation JSON:
+- Confirmed commit is the current clean HEAD of that submitted branch:
+- Public-candidate command returns PASS and its editorialbot branch instruction
+  (if any) has been retained for the pre-review issue:
 
 The software tag, GitHub Release, and exact-version archive DOI are created
 after successful JOSS review and recorded in the review issue before acceptance.

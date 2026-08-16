@@ -57,6 +57,23 @@ python scripts/check_submission_readiness.py \
   --manual-confirmations path/to/submission-confirmations.json
 ```
 
+The gate must run on the exact branch and commit submitted to JOSS. If the
+Draft PR is merged first, rerun it on the clean resulting `main` commit and
+record `submitted_branch` and `submitted_commit` accordingly; pre-merge
+evidence is not evidence for a later merge commit.
+
+After that local PASS, run:
+
+```bash
+python scripts/check_public_candidate.py \
+  --confirmations path/to/submission-confirmations.json
+```
+
+This second fail-closed gate uses the public GitHub API to verify the repository,
+concept-DOI homepage, license, submitted branch and SHA, visible README and
+paper blobs, and successful CI run for that exact SHA. It also reports the
+editorialbot branch command when the paper is not on `main`.
+
 The current strict result is intentionally **FAIL** because the paper still has
 four author-input placeholders, no confirmed corresponding author, and no paper
 email. The mechanical preflight passes when

@@ -257,6 +257,7 @@ def main() -> int:
         failures.append(f"paper contains {placeholder_count} author-input placeholders")
 
     confirmations: dict[str, object] = {}
+    confirmed_branch = ""
     if not args.allow_author_placeholders:
         if args.manual_confirmations is None:
             failures.append("strict mode requires --manual-confirmations JSON")
@@ -284,6 +285,11 @@ def main() -> int:
                     failures.append(
                         "manual confirmations contain no valid Actions run URL for the "
                         "canonical repository"
+                    )
+                confirmed_branch = str(confirmations.get("submitted_branch", "")).strip()
+                if confirmed_branch not in {"main", "joss-submission"}:
+                    failures.append(
+                        "manual confirmations contain no valid submitted branch"
                     )
                 submitted_commit = str(confirmations.get("submitted_commit", ""))
                 if not re.fullmatch(r"[0-9a-fA-F]{40}", submitted_commit):
@@ -397,10 +403,20 @@ def main() -> int:
 
     branch_value = git_output("branch", "--show-current")
     branch = "unknown" if branch_value is None else (branch_value or "detached")
-    if branch not in {"joss-submission", "unknown"} or (
-        not args.allow_author_placeholders and branch != "joss-submission"
-    ):
-        failures.append(f"unexpected submission branch: {branch}")
+    allowed_submission_branches = {"main", "joss-submission"}
+    if args.allow_author_placeholders:
+        if branch not in allowed_submission_branches | {"unknown"}:
+            failures.append(f"unexpected submission branch: {branch}")
+    else:
+        if branch == "unknown":
+            failures.append("strict mode cannot verify the current Git branch")
+        elif branch not in allowed_submission_branches:
+            failures.append(f"unexpected submission branch: {branch}")
+        elif confirmed_branch in allowed_submission_branches and branch != confirmed_branch:
+            failures.append(
+                f"current branch {branch!r} does not match confirmed submitted branch "
+                f"{confirmed_branch!r}"
+            )
 
     current_head = git_output("rev-parse", "HEAD")
     status_porcelain = git_output("status", "--porcelain=v1", "--untracked-files=all")
@@ -436,6 +452,7 @@ def main() -> int:
     print(f"citations={len(cited)}")
     print(f"bibliography_entries={len(bibliography)}")
     print(f"branch={branch}")
+    print(f"submitted_branch_confirmed={confirmed_branch or 'none'}")
     print(f"current_head={current_head or 'unknown'}")
     print(
         "worktree_clean="

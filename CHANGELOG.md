@@ -28,6 +28,9 @@
   required sections, author placeholders, corresponding-author metadata,
   citations, versions, README targets, branch state, and build/cache pollution;
   strict mode also requires an evidence-backed author confirmation record.
+- Added a public-candidate gate that checks the canonical GitHub repository,
+  concept-DOI homepage, license, submitted branch/commit, visible README and
+  paper blobs, and successful CI run against the same confirmed revision.
 - Added a fingerprinted NIST 30 keV material-attenuation core with explicit wt%
   composition, ideal-mixture density, partial-uncertainty/porosity warnings,
   nominal Ti-24Nb-4Zr-8Sn, Ti-6Al-4V, and Zr-2.5Nb regression values, and JSON

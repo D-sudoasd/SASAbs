@@ -175,6 +175,23 @@ python scripts/check_submission_readiness.py \
   --manual-confirmations path/to/submission-confirmations.json
 ```
 
+Run the strict command from the exact branch and commit that will be submitted.
+If Draft PR #1 is merged first, check out the resulting clean `main`, update
+`submitted_branch` and `submitted_commit` in the confirmation JSON, and rerun
+the gate. A PASS recorded before the merge does not cover the merge commit.
+
+After the strict local gate passes, verify the same commit, branch, visible
+README and paper, repository identity, and successful CI run against GitHub:
+
+```bash
+python scripts/check_public_candidate.py \
+  --confirmations path/to/submission-confirmations.json
+```
+
+When the paper remains outside the default branch, the command prints the exact
+`@editorialbot set branch-where-paper-is ...` instruction required in the JOSS
+pre-review issue. Remote mismatches or unavailable evidence fail closed.
+
 Until the author-controlled fields are complete, use
 `--allow-author-placeholders --as-of 2026-08-26` only for mechanical preflight.
 That override is not submission authorization. Start from the
