@@ -25,6 +25,15 @@ class IntensityState(str, Enum):
 
 
 ABSOLUTE_CORRECTIONS = frozenset({"thickness", "k"})
+CM_INV_UNIT_TOKENS = frozenset({"1cm", "cm1", "cminverse", "percm"})
+
+
+def is_cm_inv_intensity_unit(value: object) -> bool:
+    """Return True only for explicit cm^-1 unit strings, not a bare 'absolute'."""
+
+    return _normalized_token(value) in CM_INV_UNIT_TOKENS
+
+
 KNOWN_CORRECTIONS = frozenset(
     {
         "dark",
@@ -138,7 +147,6 @@ def _state_from_metadata(value: object) -> IntensityState | None:
         "counts": IntensityState.RAW_COUNTS,
         "absolutecm1": IntensityState.ABSOLUTE_CM_INV,
         "absolute1cm": IntensityState.ABSOLUTE_CM_INV,
-        "absolute": IntensityState.ABSOLUTE_CM_INV,
         "ambiguous": IntensityState.AMBIGUOUS,
         "unknown": IntensityState.AMBIGUOUS,
     }
@@ -207,7 +215,7 @@ def assess_intensity_state(profile: Mapping[str, object]) -> IntensityStateAsses
     unit = _normalized_token(
         profile.get("intensity_unit", provenance.get("intensity_unit", ""))
     )
-    if unit in {"1cm", "cm1", "cminverse", "percm"}:
+    if is_cm_inv_intensity_unit(unit):
         semantic_states.add(IntensityState.ABSOLUTE_CM_INV)
         evidence.append(f"unit:{profile.get('intensity_unit', provenance.get('intensity_unit'))}")
 
@@ -309,7 +317,7 @@ def require_absolute_input_for_buffer_subtraction(
     provenance = profile.get("operator_provenance")
     provenance = provenance if isinstance(provenance, Mapping) else {}
     raw_unit = profile.get("intensity_unit", provenance.get("intensity_unit", ""))
-    if _normalized_token(raw_unit) not in {"1cm", "cm1", "cminverse", "percm"}:
+    if not is_cm_inv_intensity_unit(raw_unit):
         raise ValueError(f"{profile_name}: buffer intensity_unit must be 1/cm")
     corrections = set(assessment.corrections_applied)
     missing = set(ABSOLUTE_CORRECTIONS) - corrections

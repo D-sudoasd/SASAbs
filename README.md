@@ -20,6 +20,12 @@
 reusable data writers, and provenance checks. The result and the processing
 record remain reviewable together.
 
+Reviewers should use the unreleased 2.0.0 tree on
+[`main`](https://github.com/D-sudoasd/SASAbs). GitHub Release
+[v1.1.1](https://github.com/D-sudoasd/SASAbs/releases/tag/v1.1.1) is an earlier
+archive and is not this candidate. Do not treat the Zenodo concept DOI as a
+version DOI for 2.0.0.
+
 <p align="center">
   <a href="#quick-start"><strong>Quick start</strong></a> ·
   <a href="#choose-a-workflow">Choose a workflow</a> ·
@@ -77,7 +83,7 @@ a display server.
 
 | Route | Best for | Start here |
 | --- | --- | --- |
-| **CLI utilities** | normalization, header and 1D parsing, robust K estimation | `saxsabs --help` |
+| **CLI utilities** | normalization, header and 1D parsing, gated K estimation, gated buffer subtraction | `saxsabs --help` |
 | **SAXSAbs Workbench** | interactive K calibration, batch processing, external-1D scaling | `saxsabs-workbench --lang en` |
 | **Strict BL19B2 runner** | validated campaign inputs under current BL19B2 conventions | [batch runbook](docs/bl19b2_abs2d_batch_runbook.md) |
 | **Python API** | reusable scientific calculations and file I/O | [API reference](docs/api.md) |
@@ -116,16 +122,19 @@ not experimental evidence.
 
 ## Reproducible example
 
-The bundled example generates deterministic synthetic dark, background,
-standard, and sample frames, then runs the package reduction APIs:
+The bundled example plants deterministic synthetic dark, background,
+standard, and sample frames on a 9×9 array, subtracts a NIST blank in detector
+space, and reduces with a homemade integer-bin radial average (not pyFAI):
 
 ```bash
 python examples/minimal_2d/run_minimal_2d_pipeline.py
 ```
 
 It writes inspectable CSV, TSV, and XML outputs, plus HDF5 when `h5py` is
-installed. The acceptance summary requires `k_relative_error < 0.005` and
-`sample_max_relative_error < 0.01`. See the
+installed. The script gates the standard profile as `relative` before $K$,
+writes `absolute_cm^-1` metadata, and checks that the XML exposes `i_abs`
+rather than `i_rel`. The acceptance summary requires `k_relative_error < 0.005`
+and `sample_max_relative_error < 0.01`. See the
 [example documentation](examples/minimal_2d/README.md) for construction details
 and expected files.
 
@@ -133,8 +142,10 @@ and expected files.
   <img src="assets/readme/kfactor-demo.png" width="92%" alt="Deterministic synthetic K-factor example showing retained and rejected ratios.">
 </p>
 
-> This example checks software arithmetic and generated file content. It is not
-> measured-beamline validation or independent third-party format validation.
+> This example recovers a planted synthetic $K$ and sample curve from a 9×9
+> homemade radial average and checks labeled file content. It is not pyFAI
+> integration, BL19B2 campaign validation, measured-beamline validation, or
+> independent third-party format validation.
 
 ## Documentation
 
@@ -151,10 +162,12 @@ and expected files.
 
 Absolute calibration depends on a suitable reference, detector geometry,
 monitor semantics, transmission, thickness, and instrument-specific provenance.
-The strict 2D workflow currently targets BL19B2 conventions. canSAS1d output is
-checked against the official version 1.1 XSD. NXcanSAS output passes project-local
-round-trip tests and punx 0.3.5 with its bundled v2018.5 definitions; current
-NeXus definitions and third-party consumers have not yet been verified.
+The strict 2D workflow currently targets BL19B2 conventions. canSAS1d and
+NXcanSAS layouts are covered by project-local round-trip tests. An offline
+check on 15 August 2026 validated the deterministic example against the official
+canSAS1d 1.1 XSD and punx 0.3.5 with its bundled v2018.5 definitions; that check
+is not in CI. Current NeXus definitions and third-party consumers have not been
+verified.
 
 ## Development
 
@@ -176,9 +189,9 @@ python scripts/check_submission_readiness.py \
 ```
 
 Run the strict command from the exact branch and commit that will be submitted.
-If Draft PR #1 is merged first, check out the resulting clean `main`, update
-`submitted_branch` and `submitted_commit` in the confirmation JSON, and rerun
-the gate. A PASS recorded before the merge does not cover the merge commit.
+PR #1 is already on `main`. A PASS recorded on an earlier revision does not
+cover a later commit; update `submitted_branch` and `submitted_commit` and rerun
+the gate on the revision sent to JOSS.
 
 After the strict local gate passes, verify the same commit, branch, visible
 README and paper, repository identity, and successful CI run against GitHub:

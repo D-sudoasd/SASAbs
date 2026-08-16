@@ -20,7 +20,7 @@ git clone https://github.com/D-sudoasd/SASAbs.git
 cd SASAbs
 python -m pip install -e ".[dev]"
 pytest -q
-ruff check src tests
+ruff check SASAbs.py saxs_mpl_style.py src tests paper/*.py scripts/*.py
 ```
 
 Install `.[gui]`, `.[hdf5]`, `.[io]`, or `.[bl19b2]` only when the change needs
@@ -33,7 +33,9 @@ Keep pull requests focused. For a behavior change:
 - add or update focused tests;
 - keep reusable scientific logic in `src/saxsabs/` and GUI orchestration separate;
 - update public CLI/API documentation when its behavior changes;
-- run `pytest -q` and `ruff check src tests` locally;
+- run `pytest -q` and
+  `ruff check SASAbs.py saxs_mpl_style.py src tests paper/*.py scripts/*.py`
+  locally;
 - describe the workflow, validation performed, and any remaining limitations.
 
 Maintainers review pull requests for scientific input semantics, provenance,

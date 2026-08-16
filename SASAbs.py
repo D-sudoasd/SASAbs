@@ -1340,9 +1340,33 @@ except Exception:
     write_nxcansas_h5 = None
 
 try:
-    from saxsabs.io.parsers import read_external_1d_profile as _core_read_external_1d_profile
+    from saxsabs.io.parsers import (
+        profile_intensity as _core_profile_intensity,
+        profile_uncertainty as _core_profile_uncertainty,
+        read_external_1d_profile as _core_read_external_1d_profile,
+    )
 except Exception:
+    _core_profile_intensity = None
+    _core_profile_uncertainty = None
     _core_read_external_1d_profile = None
+
+
+def _profile_intensity(profile):
+    if _core_profile_intensity is not None:
+        return _core_profile_intensity(profile)
+    for key in ("intensity", "i_abs", "i_rel"):
+        if key in profile:
+            return np.asarray(profile[key], dtype=np.float64)
+    raise KeyError("profile has no intensity array")
+
+
+def _profile_uncertainty(profile):
+    if _core_profile_uncertainty is not None:
+        return _core_profile_uncertainty(profile)
+    for key in ("uncertainty", "err_abs", "err_rel"):
+        if key in profile:
+            return np.asarray(profile[key], dtype=np.float64)
+    raise KeyError("profile has no uncertainty array")
 
 try:
     from saxsabs.io.calibrated2d import (
@@ -5657,18 +5681,29 @@ class SAXSAbsWorkbenchApp:
 
         if subtract_buffer is None:
             raise RuntimeError("formal buffer subtraction kernel is unavailable")
+        sample_profile = {
+            "intensity_state": "absolute_cm^-1",
+            "intensity_unit": "1/cm",
+            "i_col": "I_abs_cm^-1",
+            "operator_provenance": {
+                "intensity_state": "absolute_cm^-1",
+                "corrections_applied": '["k","thickness"]',
+            },
+        }
         args = (
             np.asarray(sample_q, dtype=np.float64),
             np.asarray(sample_i, dtype=np.float64),
             np.asarray(sample_err, dtype=np.float64),
             np.asarray(buffer_profile["x"], dtype=np.float64),
-            np.asarray(buffer_profile["i_rel"], dtype=np.float64),
-            np.asarray(buffer_profile["err_rel"], dtype=np.float64),
+            _profile_intensity(buffer_profile),
+            _profile_uncertainty(buffer_profile),
         )
         result = subtract_buffer(
             *args,
             alpha=alpha,
             alpha_uncertainty=alpha_uncertainty,
+            sample_profile=sample_profile,
+            buffer_profile=buffer_profile,
         )
         if result.err_statistical is None:
             raise RuntimeError("buffer kernel did not return statistical uncertainty")
@@ -6134,8 +6169,11 @@ class SAXSAbsWorkbenchApp:
 
         xr, yr, er = self._regularize_xy_triplet(
             ref_profile["x"],
-            ref_profile["i_rel"],
-            ref_profile.get("err_rel"),
+            _profile_intensity(ref_profile),
+            ref_profile.get(
+                "uncertainty",
+                ref_profile.get("err_abs", ref_profile.get("err_rel")),
+            ),
             min_points=2,
             name=name,
         )
@@ -6713,8 +6751,8 @@ class SAXSAbsWorkbenchApp:
                             else:
                                 thk_cm_used = fixed_thk_cm
                                 thickness_source = "tab3_fixed_thickness_input"
-                            i_abs = np.asarray(prof["i_rel"], dtype=np.float64) * scale_factor
-                            err_abs = np.asarray(prof["err_rel"], dtype=np.float64) * abs(scale_factor)
+                            i_abs = _profile_intensity(prof) * scale_factor
+                            err_abs = _profile_uncertainty(prof) * abs(scale_factor)
                         else:
                             sp = self.resolve_external_sample_params(fp, meta_map, monitor_mode)
                             norm_s = sp["norm"]
@@ -6742,8 +6780,8 @@ class SAXSAbsWorkbenchApp:
                                 thickness_source = str(provenance["thickness_source"])
                                 scale_factor = k
 
-                            s_i = np.asarray(prof["i_rel"], dtype=np.float64)
-                            s_e = np.asarray(prof["err_rel"], dtype=np.float64)
+                            s_i = _profile_intensity(prof)
+                            s_e = _profile_uncertainty(prof)
                             x = np.asarray(prof["x"], dtype=np.float64)
 
                             self.assert_external_profile_axis_compatible(prof, bg_prof, "BG")
@@ -10867,7 +10905,7 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
                 from saxsabs.io.parsers import read_external_1d_profile
                 prof = read_external_1d_profile(ref_path)
                 q_user = prof["x"]
-                i_user = prof["i_rel"]
+                i_user = _profile_intensity(prof)
                 return get_reference_data(key, q_user=q_user, i_user=i_user)
             elif key == "Water_20C":
                 temp_c = self.t1_water_temp.get()

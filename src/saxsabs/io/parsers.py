@@ -27,6 +27,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from saxsabs.core.intensity_state import IntensityState, assess_intensity_state
+
 
 FLOAT_PATTERN = re.compile(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?")
 COMMA_THOUSANDS_PATTERN = re.compile(r"(?<!\d)[-+]?\d{1,3}(?:,\d{3})+(?:[eE][-+]?\d+)?(?!\d)")
@@ -60,6 +62,44 @@ _OPERATOR_PROVENANCE_ALIASES = {
     "uncertaintymodel": "uncertainty_model",
     "uncertaintytype": "uncertainty_type",
 }
+
+
+def profile_intensity(profile: dict[str, Any]) -> np.ndarray:
+    """Return the intensity array without assuming a relative or absolute label."""
+
+    for key in ("intensity", "i_abs", "i_rel"):
+        if key in profile:
+            return np.asarray(profile[key], dtype=np.float64)
+    raise KeyError("profile has no intensity array")
+
+
+def profile_uncertainty(profile: dict[str, Any]) -> np.ndarray:
+    """Return the uncertainty array without assuming a relative or absolute label."""
+
+    for key in ("uncertainty", "err_abs", "err_rel"):
+        if key in profile:
+            return np.asarray(profile[key], dtype=np.float64)
+    raise KeyError("profile has no uncertainty array")
+
+
+def _attach_intensity_arrays(
+    payload: dict[str, Any],
+    intensity: np.ndarray,
+    uncertainty: np.ndarray,
+) -> dict[str, Any]:
+    """Expose intensity under a key that matches the assessed scientific state."""
+
+    payload["intensity"] = intensity
+    payload["uncertainty"] = uncertainty
+    assessment = assess_intensity_state(payload)
+    payload["intensity_state"] = assessment.state.value
+    if assessment.state is IntensityState.ABSOLUTE_CM_INV:
+        payload["i_abs"] = intensity
+        payload["err_abs"] = uncertainty
+    elif assessment.state is IntensityState.RELATIVE:
+        payload["i_rel"] = intensity
+        payload["err_rel"] = uncertainty
+    return payload
 
 
 def _operator_provenance_key(value: object) -> str | None:
@@ -438,23 +478,23 @@ def read_external_1d_profile(path: str | Path) -> dict[str, Any]:
         )
 
         x = pd.to_numeric(df[x_col], errors="coerce").to_numpy(dtype=np.float64, na_value=np.nan)
-        i_rel = pd.to_numeric(df[i_col], errors="coerce").to_numpy(dtype=np.float64, na_value=np.nan)
-        mask = np.isfinite(x) & np.isfinite(i_rel)
+        intensity = pd.to_numeric(df[i_col], errors="coerce").to_numpy(dtype=np.float64, na_value=np.nan)
+        mask = np.isfinite(x) & np.isfinite(intensity)
         if int(mask.sum()) < 3:
             continue
 
         x = x[mask]
-        i_rel = i_rel[mask]
+        intensity = intensity[mask]
 
         if err_named and err_col is not None:
             err = pd.to_numeric(df[err_col], errors="coerce").to_numpy(dtype=np.float64, na_value=np.nan)[mask]
             err = np.where(np.isfinite(err), err, np.nan)
         else:
-            err = np.full_like(i_rel, np.nan, dtype=np.float64)
+            err = np.full_like(intensity, np.nan, dtype=np.float64)
 
         order = np.argsort(x)
         x = x[order]
-        i_rel = i_rel[order]
+        intensity = intensity[order]
         err = err[order]
 
         pts = int(x.size)
@@ -464,8 +504,8 @@ def read_external_1d_profile(path: str | Path) -> dict[str, Any]:
             best_rank = rank
             best = {
                 "x": x,
-                "i_rel": i_rel,
-                "err_rel": err,
+                "intensity": intensity,
+                "uncertainty": err,
                 "x_col": str(x_col),
                 "i_col": str(i_col),
                 "err_col": str(err_col) if err_named and err_col is not None else "",
@@ -474,7 +514,9 @@ def read_external_1d_profile(path: str | Path) -> dict[str, Any]:
     if best is None:
         raise ValueError(f"Cannot identify valid numeric columns in {Path(path).name}")
     best["operator_provenance"] = _read_text_operator_provenance(p)
-    return best
+    intensity = np.asarray(best.pop("intensity"), dtype=np.float64)
+    uncertainty = np.asarray(best.pop("uncertainty"), dtype=np.float64)
+    return _attach_intensity_arrays(best, intensity, uncertainty)
 
 
 # ---------------------------------------------------------------------------
@@ -486,8 +528,9 @@ _CANSAS_NS = "urn:cansas1d:1.1"
 def read_cansas1d_xml(path: str | Path) -> dict[str, Any]:
     """Read a canSAS 1D XML file and return a profile dict.
 
-    Returns the same ``{"x", "i_rel", "err_rel", ...}`` dict as
-    :func:`read_external_1d_profile`.
+    Returns the same profile dict as :func:`read_external_1d_profile`, with
+    ``intensity`` always present and ``i_abs`` or ``i_rel`` only when the
+    assessed state matches.
     """
     p = Path(path)
     tree = ET.parse(str(p))
@@ -529,7 +572,7 @@ def read_cansas1d_xml(path: str | Path) -> dict[str, Any]:
         raise ValueError(f"canSAS XML contains too few data points: {p.name}")
 
     x = np.asarray(q_vals, dtype=np.float64)
-    i_rel = np.asarray(i_vals, dtype=np.float64)
+    intensity = np.asarray(i_vals, dtype=np.float64)
     err = np.asarray(e_vals, dtype=np.float64) if e_vals else np.full_like(x, np.nan)
 
     operator_provenance: dict[str, str] = {}
@@ -539,16 +582,18 @@ def read_cansas1d_xml(path: str | Path) -> dict[str, Any]:
             if key is not None and term.text is not None:
                 operator_provenance[key] = term.text.strip()
     order = np.argsort(x)
-    return {
-        "x": x[order],
-        "i_rel": i_rel[order],
-        "err_rel": err[order],
-        "x_col": "Q",
-        "i_col": "I",
-        "err_col": "Idev",
-        "intensity_unit": intensity_unit,
-        "operator_provenance": operator_provenance,
-    }
+    return _attach_intensity_arrays(
+        {
+            "x": x[order],
+            "x_col": "Q",
+            "i_col": "I",
+            "err_col": "Idev",
+            "intensity_unit": intensity_unit,
+            "operator_provenance": operator_provenance,
+        },
+        intensity[order],
+        err[order],
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -558,7 +603,7 @@ def read_cansas1d_xml(path: str | Path) -> dict[str, Any]:
 def read_nxcansas_h5(path: str | Path) -> dict[str, Any]:
     """Read an NXcanSAS HDF5 file and return a profile dict.
 
-    Requires the ``h5py`` package.  Returns the same dict format as
+    Requires the ``h5py`` package.  Returns the same profile dict as
     :func:`read_external_1d_profile`.
     """
     try:
@@ -630,17 +675,17 @@ def read_nxcansas_h5(path: str | Path) -> dict[str, Any]:
         raise ValueError(f"Cannot find SASdata/Q,I datasets in {p.name}")
 
     x = np.asarray(q_ds, dtype=np.float64).ravel()
-    i_rel = np.asarray(i_ds, dtype=np.float64).ravel()
+    intensity = np.asarray(i_ds, dtype=np.float64).ravel()
     err = (
         np.asarray(e_ds, dtype=np.float64).ravel()
         if e_ds is not None
         else np.full_like(x, np.nan)
     )
 
-    if x.shape != i_rel.shape:
+    if x.shape != intensity.shape:
         raise ValueError(
             f"NXcanSAS dataset length mismatch in {p.name}: "
-            f"Q has {x.size} points, I has {i_rel.size}"
+            f"Q has {x.size} points, I has {intensity.size}"
         )
     if err.shape != x.shape:
         raise ValueError(
@@ -649,16 +694,18 @@ def read_nxcansas_h5(path: str | Path) -> dict[str, Any]:
         )
 
     order = np.argsort(x)
-    return {
-        "x": x[order],
-        "i_rel": i_rel[order],
-        "err_rel": err[order],
-        "x_col": "Q",
-        "i_col": "I",
-        "err_col": "Idev" if e_ds is not None else "",
-        "intensity_unit": intensity_unit,
-        "operator_provenance": operator_provenance,
-    }
+    return _attach_intensity_arrays(
+        {
+            "x": x[order],
+            "x_col": "Q",
+            "i_col": "I",
+            "err_col": "Idev" if e_ds is not None else "",
+            "intensity_unit": intensity_unit,
+            "operator_provenance": operator_provenance,
+        },
+        intensity[order],
+        err[order],
+    )
 
 
 # ---------------------------------------------------------------------------

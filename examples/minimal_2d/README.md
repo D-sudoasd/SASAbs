@@ -26,6 +26,9 @@ Expected key result:
 - `absolute_profile.csv`, `absolute_profile.tsv`, `absolute_profile.xml`
 - `absolute_profile.h5` if `h5py` is installed (`pip install -e .[hdf5]`)
 
-The example validates software arithmetic and file interoperability. It does not
-replace validation with a measured SRM 3600 coupon and independently measured
-transmissions at the target beamline.
+The example recovers a planted synthetic $K$ and sample curve on a 9×9 array
+using a homemade integer-bin radial average (not pyFAI), writes labeled
+`absolute_cm^-1` outputs with unknown uncertainty, and checks that the XML
+exposes `i_abs` rather than `i_rel`. It uses `build_nist_net_image` for
+detector-space blank subtraction; it does not run the BL19B2 campaign runner,
+pyFAI integration, a measured SRM 3600 coupon, or a third-party format consumer.

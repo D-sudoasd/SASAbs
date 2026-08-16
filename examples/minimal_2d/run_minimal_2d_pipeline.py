@@ -17,9 +17,11 @@ from saxsabs import (
     build_nist_net_image,
     estimate_k_factor_robust,
     get_reference_data,
+    require_relative_input_for_absolute_scaling,
     write_cansas1d_xml,
     write_nxcansas_h5,
 )
+from saxsabs.io.parsers import read_cansas1d_xml
 
 
 K_TRUE = 2.0
@@ -152,9 +154,27 @@ def run_pipeline(output_dir: Path) -> dict[str, object]:
     _, sample_expected = radial_average(sample_absolute_image, center)
 
     q_ref, i_ref = get_reference_data("SRM3600")
+    standard_profile = {
+        "x": q,
+        "intensity": standard_measured / SRM3600_THICKNESS_CM,
+        "i_col": "i_standard_measured_per_cm",
+        "intensity_state": "relative",
+        "operator_provenance": {
+            "intensity_state": "relative",
+            "corrections_applied": (
+                '["background","dark","monitor","thickness","transmission"]'
+            ),
+        },
+    }
+    require_relative_input_for_absolute_scaling(
+        standard_profile,
+        profile_name="minimal_2d standard",
+        corrections_to_apply=("k",),
+        required_existing_corrections=("thickness",),
+    )
     k_result = estimate_k_factor_robust(
         q_meas=q,
-        i_meas_per_cm=standard_measured / SRM3600_THICKNESS_CM,
+        i_meas_per_cm=standard_profile["intensity"],
         q_ref=q_ref,
         i_ref=i_ref,
         q_window=(max(0.01, float(q.min())), float(q.max())),
@@ -196,6 +216,11 @@ def run_pipeline(output_dir: Path) -> dict[str, object]:
         "detector_name": "synthetic-array",
         "process_name": "minimal_2d_pipeline",
         "uncertainty_status": "unknown_without_input_variances",
+        "intensity_state": "absolute_cm^-1",
+        "intensity_unit": "1/cm",
+        "corrections_applied": (
+            '["background","dark","k","monitor","thickness","transmission"]'
+        ),
     }
     write_cansas1d_xml(
         output_dir / "absolute_profile.xml",
@@ -217,8 +242,25 @@ def run_pipeline(output_dir: Path) -> dict[str, object]:
     except ImportError:
         pass
 
+    written_xml = read_cansas1d_xml(output_dir / "absolute_profile.xml")
+    if written_xml.get("intensity_state") != "absolute_cm^-1":
+        raise RuntimeError("written XML is not labeled absolute_cm^-1")
+    if "i_rel" in written_xml:
+        raise RuntimeError("absolute XML must not expose an i_rel label")
+    if "i_abs" not in written_xml:
+        raise RuntimeError("absolute XML must expose i_abs")
+
     summary: dict[str, object] = {
         "validation_type": "deterministic_synthetic_raw_frames",
+        "evidence": (
+            "9x9 homemade integer-bin radial average recovers planted K and sample "
+            "curve; not pyFAI, not the BL19B2 campaign runner, and not measured-beamline "
+            "or third-party format validation"
+        ),
+        "detector_shape": list(source_image.shape),
+        "reduction": "homemade_integer_bin_radial_average",
+        "uses_pyfai": False,
+        "uses_bl19b2_campaign": False,
         "points": int(q.size),
         "q_min": float(q.min()),
         "q_max": float(q.max()),

@@ -14,6 +14,12 @@ from typing import Any
 
 import numpy as np
 
+from saxsabs.core.intensity_state import (
+    IntensityState,
+    assess_intensity_state,
+    is_cm_inv_intensity_unit,
+)
+
 
 # ---------------------------------------------------------------------------
 # canSAS 1D XML  (cansas1d:1.1)
@@ -69,6 +75,27 @@ def _operator_provenance_from_metadata(metadata: dict[str, Any]) -> dict[str, st
             provenance[key] = str(value).strip()
     return provenance
 
+
+def _require_absolute_cm_inv_unit(metadata: dict[str, Any]) -> str:
+    """Stamp 1/cm only when the caller declared absolute cm^-1 intensity."""
+
+    assessment = assess_intensity_state(metadata)
+    if assessment.state is not IntensityState.ABSOLUTE_CM_INV:
+        raise ValueError(
+            "absolute-intensity writers require intensity_state=absolute_cm^-1 "
+            f"and a cm^-1 intensity_unit; assessed state is {assessment.state.value}"
+        )
+    nested = metadata.get("operator_provenance")
+    nested = nested if isinstance(nested, dict) else {}
+    unit = metadata.get("intensity_unit", nested.get("intensity_unit", ""))
+    if not is_cm_inv_intensity_unit(unit):
+        raise ValueError(
+            "absolute-intensity writers refuse to stamp 1/cm without an explicit "
+            "cm^-1 intensity_unit"
+        )
+    return "1/cm"
+
+
 def _prepare_profile_arrays(
     q: np.ndarray,
     i_abs: np.ndarray,
@@ -122,6 +149,7 @@ def write_cansas1d_xml(
         The written file path.
     """
     meta = metadata or {}
+    intensity_unit = _require_absolute_cm_inv_unit(meta)
     out = Path(path)
 
     root = ET.Element("SASroot")
@@ -142,10 +170,10 @@ def write_cansas1d_xml(
         idata = ET.SubElement(sasdata, "Idata")
         qel = ET.SubElement(idata, "Q", unit="1/A")
         qel.text = f"{q_arr[idx]:.8g}"
-        iel = ET.SubElement(idata, "I", unit="1/cm")
+        iel = ET.SubElement(idata, "I", unit=intensity_unit)
         iel.text = f"{i_arr[idx]:.8g}"
         if e_arr is not None and np.isfinite(e_arr[idx]):
-            eel = ET.SubElement(idata, "Idev", unit="1/cm")
+            eel = ET.SubElement(idata, "Idev", unit=intensity_unit)
             eel.text = f"{e_arr[idx]:.8g}"
 
     # --- SASsample ---
@@ -222,6 +250,7 @@ def write_nxcansas_h5(
         ) from exc
 
     meta = metadata or {}
+    intensity_unit = _require_absolute_cm_inv_unit(meta)
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     q_arr, i_arr, e_arr = _prepare_profile_arrays(q, i_abs, err)
@@ -247,11 +276,11 @@ def write_nxcansas_h5(
         ds_q.attrs["units"] = "1/angstrom"
 
         ds_i = data.create_dataset("I", data=i_arr)
-        ds_i.attrs["units"] = "1/cm"
+        ds_i.attrs["units"] = intensity_unit
 
         if e_arr is not None:
             ds_e = data.create_dataset("Idev", data=e_arr)
-            ds_e.attrs["units"] = "1/cm"
+            ds_e.attrs["units"] = intensity_unit
 
         # SASinstrument (minimal)
         inst = entry.create_group("sasinstrument01")

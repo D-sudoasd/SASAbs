@@ -77,7 +77,8 @@ def test_read_external_1d_profile_csv(tmp_path: Path):
     assert out["x"].size == 3
     assert out["x_col"].lower() == "q"
     assert out["i_col"].lower() == "intensity"
-    assert np.isclose(out["i_rel"][0], 100.0)
+    assert np.isclose(out["intensity"][0], 100.0)
+    assert "i_rel" not in out
 
 
 def test_read_external_1d_profile_space_delimited(tmp_path: Path):
@@ -92,7 +93,7 @@ def test_read_external_1d_profile_space_delimited(tmp_path: Path):
 
     out = read_external_1d_profile(f)
     assert out["x"].size == 3
-    assert np.isfinite(out["err_rel"]).all()
+    assert np.isfinite(out["uncertainty"]).all()
     assert out["err_col"].lower() == "sigma"
 
 
@@ -142,7 +143,8 @@ def test_read_external_1d_profile_prefers_intensity_over_id_column(tmp_path: Pat
     out = read_external_1d_profile(f)
     assert out["x_col"].lower() == "q"
     assert out["i_col"].lower() == "intensity"
-    np.testing.assert_allclose(out["i_rel"], [100.0, 90.0, 80.0])
+    np.testing.assert_allclose(out["intensity"], [100.0, 90.0, 80.0])
+    assert "i_rel" not in out
 
 
 def test_read_external_1d_profile_unnamed_third_column_not_treated_as_error(tmp_path: Path):
@@ -157,7 +159,7 @@ def test_read_external_1d_profile_unnamed_third_column_not_treated_as_error(tmp_
     out = read_external_1d_profile(f)
     assert out["x"].size == 3
     assert out["err_col"] == ""
-    assert np.all(np.isnan(out["err_rel"]))
+    assert np.all(np.isnan(out["uncertainty"]))
 
 
 def test_read_external_1d_profile_prefers_combined_over_earlier_statistical_column(
@@ -175,4 +177,4 @@ def test_read_external_1d_profile_prefers_combined_over_earlier_statistical_colu
     out = read_external_1d_profile(f)
 
     assert out["err_col"] == "Error_CombinedStandard_cm^-1"
-    np.testing.assert_allclose(out["err_rel"], [1.5, 2.5, 3.5])
+    np.testing.assert_allclose(out["uncertainty"], [1.5, 2.5, 3.5])

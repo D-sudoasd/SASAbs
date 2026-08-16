@@ -2,14 +2,18 @@
 
 Updated: 16 August 2026 (Asia/Shanghai)
 
+Review the unreleased 2.0.0 tree on `main`, not GitHub Release v1.1.1. Do not
+create `v2.0.0`, a GitHub Release, or a Zenodo version archive during review.
+
 ## Locally verified
 
 - Full source suite: PASS in a fully provisioned Python 3.13 environment; exact
   count and duration are retained in the dated external validation record.
 - Ruff: root modules, package, tests, paper scripts, and submission gate pass.
 - README: 5 local images and all local links resolve; SVG/image audit passes.
-- Minimal 2D example: K and sample maximum relative errors are
-  `0.001933697...`; CSV, TSV, XML, and HDF5 outputs are written.
+- Minimal 2D example: 9×9 homemade radial average (not pyFAI) recovers planted
+  K and sample maximum relative errors of `0.001933697...`; CSV, TSV, XML, and
+  HDF5 outputs are written with unknown uncertainty.
 - Fresh-copy distribution build: wheel and sdist PASS from a source tree
   outside every Git checkout. The exact archive inventory is retained in the
   dated external validation record; the sdist includes README assets,
@@ -30,10 +34,11 @@ Updated: 16 August 2026 (Asia/Shanghai)
   have green push and Draft-PR runs for the complete matrix. Immutable commit
   IDs and run URLs belong in the dated external validation record rather than
   this tracked file, because editing the evidence here creates a new HEAD.
-- External format checks: the deterministic example's canSAS1d XML validates
-  against the official 1.1 XSD with zero errors. Its NXcanSAS HDF5 output passes
-  punx 0.3.5 with bundled v2018.5 definitions (97 OK, 0 WARN, 0 ERROR); current
-  NeXus definitions and third-party consumers remain unverified.
+- External format checks (offline 15 August 2026, not in CI): the deterministic
+  example's canSAS1d XML validated against the official 1.1 XSD with zero
+  errors. Its NXcanSAS HDF5 output passed punx 0.3.5 with bundled v2018.5
+  definitions (97 OK, 0 WARN, 0 ERROR); current NeXus definitions and
+  third-party consumers remain unverified.
 
 ## Must be resolved before submission
 
@@ -59,10 +64,10 @@ python scripts/check_submission_readiness.py \
   --manual-confirmations path/to/submission-confirmations.json
 ```
 
-The gate must run on the exact branch and commit submitted to JOSS. If the
-Draft PR is merged first, rerun it on the clean resulting `main` commit and
-record `submitted_branch` and `submitted_commit` accordingly; pre-merge
-evidence is not evidence for a later merge commit.
+The gate must run on the exact branch and commit submitted to JOSS. PR #1 is
+already on `main`; rerun the gate on the clean `main` commit that will be
+submitted and record `submitted_branch` and `submitted_commit` accordingly.
+Evidence from an earlier revision is not evidence for a later commit.
 
 After that local PASS, run:
 

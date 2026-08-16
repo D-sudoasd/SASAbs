@@ -65,6 +65,8 @@ def test_cli_estimate_k(tmp_path: Path, capsys: pytest.CaptureFixture[str], monk
             str(meas),
             "--ref",
             str(ref),
+            "--intensity-state",
+            "relative",
             "--qmin",
             "0.01",
             "--qmax",
@@ -100,7 +102,16 @@ def test_cli_estimate_k_accepts_common_intensity_column_names(
     monkeypatch.setattr(
         sys,
         "argv",
-        ["saxsabs", "estimate-k", "--meas", str(meas), "--ref", str(ref)],
+        [
+            "saxsabs",
+            "estimate-k",
+            "--meas",
+            str(meas),
+            "--ref",
+            str(ref),
+            "--intensity-state",
+            "relative",
+        ],
     )
     main()
     out = json.loads(capsys.readouterr().out)
@@ -115,18 +126,27 @@ def test_cli_estimate_k_accepts_scattering_column_names_with_units(
     meas = tmp_path / "meas.csv"
     ref = tmp_path / "ref.csv"
     meas.write_text(
-        "Q_A^-1,I_abs\n0.01,17.1\n0.02,15.4\n0.05,13.4\n0.10,11.8\n",
+        "Q_A^-1,I_rel\n0.01,17.1\n0.02,15.4\n0.05,13.4\n0.10,11.8\n",
         encoding="utf-8",
     )
     ref.write_text(
-        "Q_A^-1,I_abs\n0.01,34.2\n0.02,30.8\n0.05,26.8\n0.10,23.6\n",
+        "Q_A^-1,I_rel\n0.01,34.2\n0.02,30.8\n0.05,26.8\n0.10,23.6\n",
         encoding="utf-8",
     )
 
     monkeypatch.setattr(
         sys,
         "argv",
-        ["saxsabs", "estimate-k", "--meas", str(meas), "--ref", str(ref)],
+        [
+            "saxsabs",
+            "estimate-k",
+            "--meas",
+            str(meas),
+            "--ref",
+            str(ref),
+            "--intensity-state",
+            "relative",
+        ],
     )
     main()
     out = json.loads(capsys.readouterr().out)
@@ -141,11 +161,11 @@ def test_cli_estimate_k_accepts_explicit_column_overrides(
     meas = tmp_path / "meas.csv"
     ref = tmp_path / "ref.csv"
     meas.write_text(
-        "angle,counts\n0.01,17.1\n0.02,15.4\n0.05,13.4\n0.10,11.8\n",
+        "angle,I_meas\n0.01,17.1\n0.02,15.4\n0.05,13.4\n0.10,11.8\n",
         encoding="utf-8",
     )
     ref.write_text(
-        "q_ref,absolute\n0.01,34.2\n0.02,30.8\n0.05,26.8\n0.10,23.6\n",
+        "q_ref,I_ref\n0.01,34.2\n0.02,30.8\n0.05,26.8\n0.10,23.6\n",
         encoding="utf-8",
     )
 
@@ -162,11 +182,13 @@ def test_cli_estimate_k_accepts_explicit_column_overrides(
             "--q-col",
             "angle",
             "--i-col",
-            "counts",
+            "I_meas",
             "--ref-q-col",
             "q_ref",
             "--ref-i-col",
-            "absolute",
+            "I_ref",
+            "--intensity-state",
+            "relative",
         ],
     )
     main()
@@ -201,6 +223,8 @@ def test_cli_estimate_k_invalid_override_lists_available_columns(
             "missing_q",
             "--i-col",
             "intensity",
+            "--intensity-state",
+            "relative",
         ],
     )
 
@@ -224,6 +248,162 @@ def test_cli_parse_external1d(tmp_path: Path, capsys: pytest.CaptureFixture[str]
     assert out["x_col"] == "q"
     assert out["i_col"] == "i"
     assert out["err_col"] == "err"
+    assert out["intensity_state"] == "ambiguous"
+
+
+def test_cli_estimate_k_refuses_i_abs_column_name(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    meas = tmp_path / "meas.csv"
+    ref = tmp_path / "ref.csv"
+    meas.write_text(
+        "Q_A^-1,I_abs\n0.01,17.1\n0.02,15.4\n0.05,13.4\n0.10,11.8\n",
+        encoding="utf-8",
+    )
+    ref.write_text(
+        "Q_A^-1,I_abs\n0.01,34.2\n0.02,30.8\n0.05,26.8\n0.10,23.6\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["saxsabs", "estimate-k", "--meas", str(meas), "--ref", str(ref)],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 1
+    assert "already absolute" in capsys.readouterr().err.lower()
+
+
+def test_cli_estimate_k_refuses_unlabeled_intensity(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    meas = tmp_path / "meas.csv"
+    ref = tmp_path / "ref.csv"
+    meas.write_text("q,i\n0.01,17.1\n0.02,15.4\n0.05,13.4\n0.10,11.8\n", encoding="utf-8")
+    ref.write_text("q,i\n0.01,34.2\n0.02,30.8\n0.05,26.8\n0.10,23.6\n", encoding="utf-8")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["saxsabs", "estimate-k", "--meas", str(meas), "--ref", str(ref)],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 1
+    assert "ambiguous" in capsys.readouterr().err.lower()
+
+
+def test_cli_estimate_k_thickness_cm_converts_to_per_cm(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    meas = tmp_path / "meas.csv"
+    ref = tmp_path / "ref.csv"
+    meas.write_text(
+        "q,i\n0.01,1.71\n0.02,1.54\n0.05,1.34\n0.10,1.18\n",
+        encoding="utf-8",
+    )
+    ref.write_text("q,i\n0.01,34.2\n0.02,30.8\n0.05,26.8\n0.10,23.6\n", encoding="utf-8")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "saxsabs",
+            "estimate-k",
+            "--meas",
+            str(meas),
+            "--ref",
+            str(ref),
+            "--intensity-state",
+            "relative",
+            "--thickness-cm",
+            "0.1",
+        ],
+    )
+    main()
+    out = json.loads(capsys.readouterr().out)
+    assert out["k_factor"] == pytest.approx(2.0, rel=1e-6)
+
+
+def _write_absolute_profile(path: Path, intensities: str) -> None:
+    path.write_text(
+        "# intensity_state: absolute_cm^-1\n"
+        "# intensity_unit: 1/cm\n"
+        '# corrections_applied: ["k","thickness"]\n'
+        "q,i\n"
+        f"{intensities}",
+        encoding="utf-8",
+    )
+
+
+def test_cli_subtract_buffer(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    sample = tmp_path / "sample.csv"
+    buffer = tmp_path / "buffer.csv"
+    _write_absolute_profile(sample, "0.01,12.0\n0.02,11.0\n0.20,6.0\n")
+    _write_absolute_profile(buffer, "0.01,2.0\n0.02,2.0\n0.20,2.0\n")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "saxsabs",
+            "subtract-buffer",
+            "--sample",
+            str(sample),
+            "--buffer",
+            str(buffer),
+            "--alpha",
+            "1.0",
+        ],
+    )
+    main()
+    out = json.loads(capsys.readouterr().out)
+    assert out["points"] == 3
+    assert out["alpha"] == pytest.approx(1.0)
+
+
+def test_cli_subtract_buffer_refuses_unlabeled_profiles(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    sample = tmp_path / "sample.csv"
+    buffer = tmp_path / "buffer.csv"
+    sample.write_text("q,i\n0.01,12.0\n0.02,11.0\n0.20,6.0\n", encoding="utf-8")
+    buffer.write_text("q,i\n0.01,2.0\n0.02,2.0\n0.20,2.0\n", encoding="utf-8")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["saxsabs", "subtract-buffer", "--sample", str(sample), "--buffer", str(buffer)],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 1
+    assert "absolute" in capsys.readouterr().err.lower()
+
+
+def test_cli_version(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch):
+    from saxsabs import __version__
+
+    monkeypatch.setattr(sys, "argv", ["saxsabs", "--version"])
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+    assert exc_info.value.code == 0
+    assert f"saxsabs {__version__}" in capsys.readouterr().out
 
 
 def test_cli_bl19b2_abs2d_passes_pydidas_yaml_and_mask_to_workflow(

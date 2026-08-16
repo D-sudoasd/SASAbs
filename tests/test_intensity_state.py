@@ -22,6 +22,15 @@ def test_absolute_column_is_rejected_before_k_or_thickness_is_reapplied():
         require_relative_input_for_absolute_scaling(profile, profile_name="sample.dat")
 
 
+def test_unitless_absolute_metadata_is_ambiguous():
+    assessment = assess_intensity_state(
+        {"i_col": "I", "operator_provenance": {"intensity_state": "absolute"}}
+    )
+
+    assert assessment.state is IntensityState.AMBIGUOUS
+    assert "invalid_metadata:intensity_state" in assessment.evidence
+
+
 def test_absolute_unit_is_detected_even_with_generic_i_column():
     assessment = assess_intensity_state({"i_col": "I", "intensity_unit": "1/cm"})
 
@@ -39,6 +48,7 @@ def test_invalid_explicit_state_is_ambiguous_even_with_absolute_unit_evidence():
 
     assert assessment.state is IntensityState.AMBIGUOUS
     assert "invalid_metadata:intensity_state" in assessment.evidence
+
 
 def test_relative_provenance_allows_absolute_scaling():
     profile = {

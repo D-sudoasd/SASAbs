@@ -35,11 +35,13 @@
 	deterministic and testable.
 - **`src/saxsabs/io`**: robust input parsing plus standard-format writers
 	(canSAS XML and NXcanSAS HDF5).
-- **`src/saxsabs/cli.py`**: six headless subcommands: four focused utilities
-  (`norm-factor`, `parse-header`, `parse-external1d`, `estimate-k`), the
-  safety-first `bl19b2-abs2d` workflow, and the explicit
-  `bl19b2-abs2d-v1-legacy` migration entry. The legacy entry requires explicit
-  monitor and thickness semantics and never silently restores v1 defaults.
+- **`src/saxsabs/cli.py`**: seven headless subcommands: five focused utilities
+  (`norm-factor`, `parse-header`, `parse-external1d`, `estimate-k`,
+  `subtract-buffer`), the safety-first `bl19b2-abs2d` workflow, and the
+  explicit `bl19b2-abs2d-v1-legacy` migration entry. `estimate-k` and
+  `subtract-buffer` apply the intensity-state gates; the first three utilities
+  remain thin parsers/calculators. The legacy entry requires explicit monitor
+  and thickness semantics and never silently restores v1 defaults.
 - **`src/saxsabs/constants.py`**: pluggable reference-standard registry
 	(SRM 3600, water, custom curves).
 - **`src/saxsabs/workbench_launcher.py`**: packaged launcher used by

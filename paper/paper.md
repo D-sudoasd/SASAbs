@@ -71,11 +71,12 @@ for external 1D data and the current BL19B2 2D workflow. It builds on pyFAI and
 FabIO rather than reimplementing detector integration and image access. The
 scholarly contribution is the explicit intensity-state and correction-history
 contract across calibration, external-profile scaling, and traceable export--a
-boundary not provided by those dependencies. Its Python, command-line, and
-graphical interfaces reuse core checks for physical inputs, processing history,
-and output state, although the Workbench is not an equivalent front end to the
-strict campaign runner. Geometry calibration and model fitting remain with the
-specialist tools above.
+boundary not provided by those dependencies. The Python API, command line, and
+Workbench share those numerical and I/O modules, but they are not equivalent
+front ends. CLI `estimate-k` and `subtract-buffer` apply the intensity-state
+gates; `norm-factor`, `parse-header`, and `parse-external1d` remain thin
+utilities. The Workbench is not a substitute for the strict campaign runner.
+Geometry calibration and model fitting remain with the specialist tools above.
 
 # Software design
 
@@ -87,9 +88,9 @@ parses heterogeneous headers and 1D tables and writes canSAS1d 1.1 XML and
 NXcanSAS 1.1 HDF5 [@cansas1d; @nxcansas]. The strict BL19B2 workflow validates
 detector, monitor, transmission, thickness, reference, and output inputs before
 integration, calibration, and export. CLI subcommands cover normalization,
-parsing, and $K$ estimation; the SAXSAbs Workbench adds interactive calibration,
-batch processing, and external-1D conversion
-(\autoref{fig:gui}).
+parsing, gated $K$ estimation, and gated buffer subtraction; the SAXSAbs
+Workbench adds interactive calibration, batch processing, and external-1D
+conversion (\autoref{fig:gui}).
 
 The design deliberately separates a bounded, strict BL19B2 campaign schema from
 the more general calculation and I/O APIs. A permissive all-beamline workflow
@@ -105,11 +106,13 @@ reference grid and calculates
 $R_i=I_{\mathrm{ref}}(q_i)/I_{\mathrm{meas}}(q_i)$. It defines the median ratio
 as $\tilde{R}$ and
 $\hat{\sigma}=1.4826\,\mathrm{median}(|R_i-\tilde{R}|)$, retains ratios within
-$3\hat{\sigma}$, and uses their median as $K$. This rule excludes isolated
-anomalous ratios. The software reports the dispersion of retained ratios
-separately from combined calibration uncertainty and propagates supported
-independent input uncertainties when supplied; unavailable terms remain
-unspecified. The BL19B2 workflow reports a partial combined standard uncertainty
+$3\hat{\sigma}$, and uses their median as $K$. Isolated anomalous ratios are
+excluded by this filter on user-supplied references; the built-in SRM 3600 path
+additionally fails closed if any ratio exceeds the certificate-derived
+relative-intensity limit before filtering. The software reports the dispersion
+of retained ratios separately from combined calibration uncertainty and
+propagates supported independent input uncertainties when supplied; unavailable
+terms remain unspecified. The BL19B2 workflow reports a partial combined standard uncertainty
 when shared covariance terms are not quantified and does not report a system
 expanded uncertainty in that case.
 
@@ -117,12 +120,15 @@ The attenuation functionality follows two distinct data paths. Its general
 diagnostic calculator obtains energy-dependent elemental coefficients from the
 Elam database through `xraydb.mu_elam` [@elam2002; @xraydb]. Its fixed 30 keV
 material calculation uses a versioned NIST SRD 126 snapshot [@nist_srd126].
-Absolute 1D intensity is reported in cm$^{-1}$. CSV and TSV outputs are directly
+Absolute 1D intensity is reported in cm$^{-1}$ only when the writer receives
+`intensity_state=absolute_cm^-1` and an explicit cm$^{-1}$ unit; a unitless
+`absolute` label is not treated as cm$^{-1}$. CSV and TSV outputs are directly
 inspectable; the structured XML and HDF5 outputs follow the documented canSAS1d
-1.1 and NXcanSAS 1.1 layouts. The XML output validates against the official
-canSAS1d 1.1 XSD. NXcanSAS output passes `punx` 0.3.5 [@punx] with its bundled
-v2018.5 definitions, but current NeXus definitions and third-party consumers
-have not yet been verified.
+1.1 and NXcanSAS 1.1 layouts. Project-local tests cover those layouts. An
+offline check on 15 August 2026 validated the deterministic example against the
+official canSAS1d 1.1 XSD and `punx` 0.3.5 [@punx] with bundled v2018.5
+definitions; that check is not in CI, and current NeXus definitions and
+third-party consumers have not been verified.
 
 ![SAXSAbs Workbench in English, showing K-calibration inputs and the plotting area. The screenshot was captured from the current source tree and contains no beamline data.](fig_gui.png){#fig:gui width="100%"}
 
@@ -132,17 +138,23 @@ Source code, tests, documentation, and examples are available in the [SASAbs
 GitHub repository](https://github.com/D-sudoasd/SASAbs) under the BSD-3-Clause
 license. The core package supports Python 3.10 and later; optional dependency
 groups enable Workbench, detector-image, BL19B2, and HDF5 functionality. The
-README includes installation instructions and minimal commands. Archived
-releases are collected in the Zenodo concept record [@saxsabs_archive].
+README includes installation instructions and minimal commands. Reviewers
+should use the unreleased 2.0.0 tree on `main`, not GitHub Release v1.1.1.
+Archived earlier releases are collected in the Zenodo concept record
+[@saxsabs_archive].
 
 # Research impact statement
 
 The repository includes a strict BL19B2 batch workflow from detector images to
-exported results. Its deterministic example in `examples/minimal_2d/` generates
-synthetic dark, background, standard, and sample images; recovers the specified
-calibration factor within the tested tolerance; and writes text, canSAS, and
-NXcanSAS outputs. Automated tests cover numerical calculations, parsers,
-exporters, the command-line interface, launchers, and Workbench validation rules.
+exported results. Its deterministic example in `examples/minimal_2d/` plants
+synthetic dark, background, standard, and sample frames on a 9×9 array;
+subtracts a NIST blank in detector space; reduces with a homemade integer-bin
+radial average (not pyFAI); recovers the planted $K$ and sample curve within
+script tolerances; and writes labeled absolute text/XML with unknown
+uncertainty. It does not exercise the BL19B2 campaign runner or third-party
+format validation. Automated tests cover numerical calculations, parsers,
+exporters, the command-line interface, launchers, and Workbench validation
+rules.
 The repository configures continuous integration for Python 3.10--3.13 on Linux,
 Windows, and macOS.
 
