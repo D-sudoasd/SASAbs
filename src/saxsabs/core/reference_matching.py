@@ -12,6 +12,8 @@ from typing import Any, Callable
 
 import numpy as np
 
+from saxsabs.io.detector_images import load_detector_image
+
 
 NO_USABLE_REFERENCE_SCORE = 1e9
 DEFAULT_MAX_SCORE_THRESHOLD = 0.5
@@ -116,24 +118,13 @@ def build_reference_library(
         def parse_header_fn(p, header_dict=None):  # type: ignore
             return None, None, None
 
-    if open_image_fn is None:
-        def _lazy_fabio_open(p):
-            import fabio
-
-            return fabio.open(p)
-
-        open_image_fn = _lazy_fabio_open
-
     refs: list[dict[str, Any]] = []
     rejected: list[dict[str, Any]] = []
     for p in unique_paths:
-        img = None
         try:
-            img = open_image_fn(p)
-            raw_data = getattr(img, "data", None)
-            shape = tuple(np.asarray(raw_data).shape) if raw_data is not None else None
-            hdr = getattr(img, "header", {}) or {}
-            exp, mon, trans = parse_header_fn(p, header_dict=hdr)
+            loaded = load_detector_image(p, dtype=None, open_image_fn=open_image_fn)
+            shape = tuple(np.asarray(loaded.data).shape)
+            exp, mon, trans = parse_header_fn(p, header_dict=loaded.header)
             mtime = Path(p).stat().st_mtime if Path(p).exists() else None
             refs.append(
                 {
@@ -153,10 +144,6 @@ def build_reference_library(
                 }
             )
             continue
-        finally:
-            close = getattr(img, "close", None) if img is not None else None
-            if callable(close):
-                close()
     return (refs, rejected) if return_rejections else refs
 
 

@@ -1383,6 +1383,54 @@ except Exception:
     make_sample_id = None
     write_calibrated2d_package = None
 
+try:
+    from saxsabs.io.detector_images import (
+        load_detector_header as _core_load_detector_header,
+        load_detector_image as _core_load_detector_image,
+    )
+except Exception:
+    _core_load_detector_header = None
+    _core_load_detector_image = None
+
+
+def _close_detector_handle(image):
+    close = getattr(image, "close", None)
+    if callable(close):
+        close()
+
+
+def _workbench_load_detector_image(path, *, dtype=np.float64):
+    """Copy pixels/header through the shared loader, keeping fabio.open patchable."""
+    if _core_load_detector_image is not None:
+        return _core_load_detector_image(path, dtype=dtype, open_image_fn=fabio.open)
+    image = fabio.open(path)
+    try:
+        raw = getattr(image, "data", None)
+        if raw is None:
+            raise ValueError(f"detector image has no pixel data: {path}")
+        if dtype is None:
+            data = np.array(raw, copy=True)
+        else:
+            data = np.array(raw, dtype=dtype, copy=True, order="C")
+        header = dict(getattr(image, "header", None) or {})
+        return SimpleNamespace(data=data, header=header)
+    finally:
+        _close_detector_handle(image)
+
+
+def _workbench_load_detector_header(path):
+    if _core_load_detector_header is not None:
+        return _core_load_detector_header(path, open_image_fn=fabio.open)
+    image = fabio.open(path)
+    try:
+        return dict(getattr(image, "header", None) or {})
+    finally:
+        _close_detector_handle(image)
+
+
+def _workbench_load_detector_pixels(path, *, dtype=np.float64):
+    return _workbench_load_detector_image(path, dtype=dtype).data
+
 
 def _calibrated2d_package_paths(root_dir, sample_id):
     root = Path(root_dir)
@@ -1468,7 +1516,7 @@ def _validate_existing_calibrated2d_package(
         )
 
     try:
-        image_data = np.asarray(fabio.open(str(paths["image"])).data)
+        image_data = np.asarray(_workbench_load_detector_pixels(paths["image"], dtype=None))
     except Exception as exc:
         raise ValueError(f"unreadable calibrated 2D EDF image: {paths['image']}: {exc}") from exc
     if image_data.ndim != 2 or image_data.size == 0 or not np.any(np.isfinite(image_data)):
@@ -1479,7 +1527,7 @@ def _validate_existing_calibrated2d_package(
     except Exception as exc:
         raise ValueError(f"unreadable calibrated 2D NPY mask: {paths['mask_npy']}: {exc}") from exc
     try:
-        mask_edf = np.asarray(fabio.open(str(paths["mask_edf"])).data)
+        mask_edf = np.asarray(_workbench_load_detector_pixels(paths["mask_edf"], dtype=None))
     except Exception as exc:
         raise ValueError(f"unreadable calibrated 2D EDF mask: {paths['mask_edf']}: {exc}") from exc
     if mask_npy.ndim != 2 or mask_edf.ndim != 2:
@@ -2263,13 +2311,13 @@ class SAXSAbsWorkbenchApp:
         dark = np.asarray(d_dark, dtype=np.float64)
 
         for bg_path in bg_paths:
-            img = fabio.open(bg_path)
-            d_bg = np.asarray(img.data, dtype=np.float64)
+            loaded = _workbench_load_detector_image(bg_path)
+            d_bg = np.asarray(loaded.data, dtype=np.float64)
             self._assert_same_shape(d_bg, dark, "bg", "dark")
             if ref_shape is not None and tuple(d_bg.shape) != tuple(ref_shape):
                 raise ValueError(f"BG 尺寸不匹配: {d_bg.shape} vs {ref_shape}")
 
-            exp, mon, trans = self.parse_header(bg_path, header_dict=getattr(img, "header", {}))
+            exp, mon, trans = self.parse_header(bg_path, header_dict=loaded.header)
             exp_use = exp if exp is not None else fallback_triplet[0]
             mon_use = mon if mon is not None else fallback_triplet[1]
             trans_use = trans if trans is not None else fallback_triplet[2]
@@ -2998,8 +3046,8 @@ class SAXSAbsWorkbenchApp:
             need_text_fallback = not has_keys()
         else:
             try:
-                img = fabio.open(filepath)
-                for k, v in getattr(img, "header", {}).items():
+                header = _workbench_load_detector_header(filepath)
+                for k, v in header.items():
                     add_meta(k, v)
                 need_text_fallback = not has_keys()
             except Exception:
@@ -3142,10 +3190,10 @@ class SAXSAbsWorkbenchApp:
         meta = self.normalize_header_dict(header_dict)
         if not meta:
             try:
-                img = fabio.open(filepath)
-                meta = self.normalize_header_dict(getattr(img, "header", {}))
+                loaded = _workbench_load_detector_image(filepath, dtype=None)
+                meta = self.normalize_header_dict(loaded.header)
                 if shape is None:
-                    shape = tuple(img.data.shape)
+                    shape = tuple(loaded.data.shape)
             except Exception:
                 pass
 
@@ -3378,9 +3426,11 @@ class SAXSAbsWorkbenchApp:
         sigs = []
         for fp in file_paths:
             try:
-                img = fabio.open(fp)
-                d = img.data
-                sig = self.extract_instrument_signature(fp, header_dict=getattr(img, "header", {}), shape=d.shape)
+                loaded = _workbench_load_detector_image(fp, dtype=None)
+                d = loaded.data
+                sig = self.extract_instrument_signature(
+                    fp, header_dict=loaded.header, shape=d.shape
+                )
                 sigs.append(sig)
             except Exception as e:
                 sigs.append({"path": str(fp), "shape": None, "error": str(e)})
@@ -3716,9 +3766,9 @@ class SAXSAbsWorkbenchApp:
             return None
         p = Path(path)
         if p.suffix.lower() == ".npy":
-            arr = np.load(path)
+            arr = np.load(path, allow_pickle=False)
         else:
-            arr = fabio.open(path).data
+            arr = _workbench_load_detector_pixels(path, dtype=None)
         if arr is None:
             raise ValueError(f"{name} 文件无法读取: {path}")
         return np.asarray(arr)
@@ -3753,9 +3803,9 @@ class SAXSAbsWorkbenchApp:
         rejected = []
         for p in list(dict.fromkeys(paths or [])):
             try:
-                img = fabio.open(p)
-                data = np.asarray(img.data)
-                exp, mon, trans = self.parse_header(p, header_dict=getattr(img, "header", {}))
+                loaded = _workbench_load_detector_image(p, dtype=None)
+                data = np.asarray(loaded.data)
+                exp, mon, trans = self.parse_header(p, header_dict=loaded.header)
                 refs.append({
                     "path": str(p),
                     "shape": tuple(data.shape),
@@ -7356,8 +7406,8 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
             self.report(self.tr("rpt_solid_angle").format(state='ON' if apply_solid_angle else 'OFF'))
             
             ai = pyFAI.load(files["poni"])
-            d_std = fabio.open(files["std"]).data.astype(np.float64)
-            d_dark = fabio.open(files["dark"]).data.astype(np.float64)
+            d_std = _workbench_load_detector_pixels(files["std"])
+            d_dark = _workbench_load_detector_pixels(files["dark"])
             self._assert_same_shape(d_std, d_dark, "std", "dark")
             dark_exposure_s = self.read_required_dark_exposure(files["dark"])
             mask_path = self.global_vars["mask_path"].get().strip()
@@ -7559,9 +7609,9 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
             bg_transmissions = []
             bg_exposures = []
             for bg_path in bg_used_paths:
-                bg_image = fabio.open(bg_path)
+                bg_header = _workbench_load_detector_header(bg_path)
                 bg_exp, bg_mon, bg_trans = self.parse_header(
-                    bg_path, header_dict=getattr(bg_image, "header", {})
+                    bg_path, header_dict=bg_header
                 )
                 bg_exp_use = bg_exp if bg_exp is not None else p["bg_exp"]
                 bg_mon_use = bg_mon if bg_mon is not None else p["bg_i0"]
@@ -8165,11 +8215,11 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
 
         def load_data(path):
             if context["parallel"]:
-                return fabio.open(path).data.astype(np.float64)
+                return _workbench_load_detector_pixels(path)
             with context["cache_lock"]:
                 if path in context["image_cache"]:
                     return context["image_cache"][path]
-            d = fabio.open(path).data.astype(np.float64)
+            d = _workbench_load_detector_pixels(path)
             with context["cache_lock"]:
                 context["image_cache"][path] = d
             return d
@@ -8270,9 +8320,9 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
                     return {"row": row, "logs": logs, "mode_stats": mode_stats}
 
             ai = context["ai_shared"] if not context["parallel"] else pyFAI.load(context["poni_path"])
-            sample = fabio.open(fpath)
-            d_s = sample.data.astype(np.float64)
-            sample_header = getattr(sample, "header", {})
+            loaded_sample = _workbench_load_detector_image(fpath)
+            d_s = np.asarray(loaded_sample.data, dtype=np.float64)
+            sample_header = loaded_sample.header
 
             exp, mon, trans = self.parse_header(fpath, header_dict=sample_header)
             monitor_mode = context["monitor_mode"]
@@ -8893,7 +8943,7 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
         dark_text = str(dark_path or "").strip()
         if not bg_text or not dark_text:
             raise ValueError("固定参考模式缺少背景或暗场文件。")
-        fixed_dark_data = fabio.open(dark_text).data.astype(np.float64)
+        fixed_dark_data = _workbench_load_detector_pixels(dark_text)
         fixed_dark_exposure_s = self.read_required_dark_exposure(dark_text)
         bg_paths = self.split_path_list(bg_text)
         if not bg_paths:
@@ -9949,13 +9999,13 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
 
             if self.t2_ref_mode.get() == "auto":
                 try:
-                    img = fabio.open(fp)
+                    loaded = _workbench_load_detector_image(fp, dtype=None)
                     smeta = {
                         "exp": e if (e is not None and np.isfinite(e)) else None,
                         "mon": m if m is not None else None,
                         "trans": t if t is not None else None,
                         "mtime": Path(fp).stat().st_mtime if Path(fp).exists() else None,
-                        "shape": tuple(img.data.shape),
+                        "shape": tuple(loaded.data.shape),
                     }
                     bg_ref, _, bg_rejected = self.select_best_reference(
                         smeta,
@@ -10114,7 +10164,7 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
             raise ValueError("请先在 Tab1/Tab2 设置 poni 文件。")
 
         ai = pyFAI.load(poni_path)
-        data = fabio.open(sample_path).data.astype(np.float64)
+        data = _workbench_load_detector_pixels(sample_path)
         if data.ndim != 2:
             raise ValueError(f"样品图像维度错误: {data.shape}")
 

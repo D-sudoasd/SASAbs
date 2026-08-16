@@ -2,6 +2,14 @@
 
 ## [2.0.0] - Unreleased
 
+### Resource-handle pass (2026-08-17)
+
+- Added `saxsabs.io.detector_images` as the common copy-and-close detector
+  loader. Shared-reference, strict 2D main/resume, integrate1d mask/EDF, and
+  Workbench FabIO readers now copy owned pixels/headers and close handles on
+  both the success and failure paths. Workbench optional `.npy` mask/flat loads
+  refuse pickled arrays.
+
 ### JOSS reviewer polish (2026-08-16)
 
 - Make `saxsabs estimate-k --ref` optional so the CLI can use the same built-in
@@ -107,8 +115,8 @@
   alpha uncertainty, propagation model, and uncertainty type in portable
   provenance. Frame reports include `BufferAlphaUncertainty`.
 - Closed FabIO handles in the strict 1D readers and strict 2D resume verifier.
-  Shared-reference, strict-2D main-read, and Workbench readers still require a
-  common close-safe loader.
+  A later resource-handle pass (2026-08-17) added the common close-safe loader
+  for the remaining shared-reference, strict-2D main-read, and Workbench paths.
 
 ### Fixed
 - Deferred the TkAgg backend selection until the desktop Workbench is actually

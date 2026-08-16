@@ -31,6 +31,7 @@ from saxsabs.core.detector_reduction import normalize_detector_frame, validate_b
 from saxsabs.core.normalization import compute_norm_factor as _core_compute_norm_factor
 from saxsabs.core.uncertainty import AbsoluteUncertaintyBudget, propagate_absolute_uncertainty
 from saxsabs.constants import get_reference_data
+from saxsabs.io.detector_images import load_detector_image, load_detector_pixels
 
 
 SCHEMA_VERSION = "saxsabs.bl19b2_abs2d.v4"
@@ -1744,18 +1745,11 @@ def find_reference_paths(
 
 
 def read_detector_image(path: str | Path) -> np.ndarray:
-    """Read a detector image using fabio and return float64 pixels."""
+    """Read a detector image using the shared copy-and-close loader."""
     try:
-        import fabio
+        return load_detector_pixels(path)
     except ImportError as exc:  # pragma: no cover
         raise ImportError("fabio is required for BL19B2 detector image reading") from exc
-    image = fabio.open(str(path))
-    try:
-        return np.array(image.data, dtype=np.float64, copy=True, order="C")
-    finally:
-        close = getattr(image, "close", None)
-        if callable(close):
-            close()
 
 
 def build_combined_mask(
@@ -3893,63 +3887,60 @@ def _validate_existing_outputs(paths: OutputPaths, metadata: dict[str, Any]) -> 
     _validate_resumed_array(h5_image, metadata=metadata, label="HDF5")
 
     try:
-        import fabio
-
-        edf = fabio.open(str(paths.edf))
-        try:
-            header = edf.header
-            if header.get("SAXSAbsSchema") != SCHEMA_VERSION:
-                raise ValueError("existing EDF internal schema mismatch")
-            if header.get("FormulaVersion") != FORMULA_VERSION:
-                raise ValueError("existing EDF formula version mismatch")
-            if header.get("ProcessingSignature") != metadata.get("processing_signature"):
-                raise ValueError("existing EDF processing signature mismatch")
-            if header.get("FrameSignature") != metadata.get("frame_signature"):
-                raise ValueError("existing EDF frame signature mismatch")
-            selection = metadata.get('sample_selection') or {}
-            derivation = metadata.get('thickness', {}).get('derivation') or {}
-            if header.get('IncludeManifestSHA256', '') != str(selection.get('sha256', '')):
-                raise ValueError('existing EDF include manifest checksum mismatch')
-            if header.get('ThicknessDerivationSHA256', '') != str(
-                derivation.get('sha256', '')
-            ):
-                raise ValueError('existing EDF thickness derivation checksum mismatch')
-            if header.get("IntensityUnit") != INTENSITY_UNIT:
-                raise ValueError("existing EDF intensity unit mismatch")
-            expected_k_headers = {
-                "KFactor": _edf_optional_float(external_k_contract["k_factor"]),
-                "KStd": _edf_optional_float(external_k_contract["k_std"]),
-                "KStdMeaning": str(external_k_contract["k_std_semantics"]).replace(";", ""),
-                "KStatStdU": _edf_optional_float(
-                    external_k_contract["k_statistical_standard_uncertainty"]
-                ),
-                "KStandardU": _edf_optional_float(
-                    external_k_contract["k_standard_uncertainty"]
-                ),
-                "KExpandedU": _edf_optional_float(
-                    external_k_contract["k_expanded_uncertainty"]
-                ),
-                "KCoverage": _edf_optional_float(external_k_contract["coverage_factor"]),
-            }
-            for key, expected in expected_k_headers.items():
-                if header.get(key) != expected:
-                    raise ValueError(f"existing EDF K calibration uncertainty mismatch for {key}")
-            expected_uncertainty_status = str(
-                metadata.get("uncertainty", {}).get("status", "unknown")
-            )
-            if header.get("UncertaintyStatus") != expected_uncertainty_status:
-                raise ValueError("existing EDF uncertainty status mismatch")
-            expected_expanded_status = str(
-                metadata.get("uncertainty", {}).get("expanded_status", "unavailable")
-            )
-            if header.get("ExpandedUStatus") != expected_expanded_status:
-                raise ValueError("existing EDF expanded uncertainty status mismatch")
-            if Path(str(header.get("UncertaintyHDF5", ""))).resolve() != paths.h5.resolve():
-                raise ValueError("existing EDF uncertainty HDF5 pointer mismatch")
-            edf_image = np.asarray(edf.data)
-        finally:
-            edf.close()
-    except (OSError, KeyError, TypeError) as exc:
+        loaded_edf = load_detector_image(paths.edf, dtype=None)
+        header = loaded_edf.header
+        edf_image = np.asarray(loaded_edf.data)
+        if header.get("SAXSAbsSchema") != SCHEMA_VERSION:
+            raise ValueError("existing EDF internal schema mismatch")
+        if header.get("FormulaVersion") != FORMULA_VERSION:
+            raise ValueError("existing EDF formula version mismatch")
+        if header.get("ProcessingSignature") != metadata.get("processing_signature"):
+            raise ValueError("existing EDF processing signature mismatch")
+        if header.get("FrameSignature") != metadata.get("frame_signature"):
+            raise ValueError("existing EDF frame signature mismatch")
+        selection = metadata.get('sample_selection') or {}
+        derivation = metadata.get('thickness', {}).get('derivation') or {}
+        if header.get('IncludeManifestSHA256', '') != str(selection.get('sha256', '')):
+            raise ValueError('existing EDF include manifest checksum mismatch')
+        if header.get('ThicknessDerivationSHA256', '') != str(
+            derivation.get('sha256', '')
+        ):
+            raise ValueError('existing EDF thickness derivation checksum mismatch')
+        if header.get("IntensityUnit") != INTENSITY_UNIT:
+            raise ValueError("existing EDF intensity unit mismatch")
+        expected_k_headers = {
+            "KFactor": _edf_optional_float(external_k_contract["k_factor"]),
+            "KStd": _edf_optional_float(external_k_contract["k_std"]),
+            "KStdMeaning": str(external_k_contract["k_std_semantics"]).replace(";", ""),
+            "KStatStdU": _edf_optional_float(
+                external_k_contract["k_statistical_standard_uncertainty"]
+            ),
+            "KStandardU": _edf_optional_float(
+                external_k_contract["k_standard_uncertainty"]
+            ),
+            "KExpandedU": _edf_optional_float(
+                external_k_contract["k_expanded_uncertainty"]
+            ),
+            "KCoverage": _edf_optional_float(external_k_contract["coverage_factor"]),
+        }
+        for key, expected in expected_k_headers.items():
+            if header.get(key) != expected:
+                raise ValueError(f"existing EDF K calibration uncertainty mismatch for {key}")
+        expected_uncertainty_status = str(
+            metadata.get("uncertainty", {}).get("status", "unknown")
+        )
+        if header.get("UncertaintyStatus") != expected_uncertainty_status:
+            raise ValueError("existing EDF uncertainty status mismatch")
+        expected_expanded_status = str(
+            metadata.get("uncertainty", {}).get("expanded_status", "unavailable")
+        )
+        if header.get("ExpandedUStatus") != expected_expanded_status:
+            raise ValueError("existing EDF expanded uncertainty status mismatch")
+        if Path(str(header.get("UncertaintyHDF5", ""))).resolve() != paths.h5.resolve():
+            raise ValueError("existing EDF uncertainty HDF5 pointer mismatch")
+    except (OSError, KeyError, TypeError, ValueError) as exc:
+        if isinstance(exc, ValueError) and "existing EDF" in str(exc):
+            raise
         raise ValueError(f"existing EDF output is unreadable or incomplete: {paths.edf}") from exc
     _validate_resumed_array(edf_image, metadata=metadata, label="EDF")
 

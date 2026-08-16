@@ -113,10 +113,11 @@
 
 ## Resource and publication boundaries
 
-- FabIO handles are closed in the strict 1D readers and the strict 2D resume
-  verification reader. The shared reference loader, the strict 2D main image
-  loader, and multiple Workbench paths still require one common copy-and-close
-  loader.
+- FabIO handles go through one common copy-and-close helper
+  (`saxsabs.io.detector_images`). The shared reference loader, the strict 2D
+  main and resume readers, the integrate1d mask/EDF loaders, and Workbench
+  detector-image paths copy pixels/header out and close the handle, including
+  after a read failure. Callers can inject `open_image_fn` at the I/O edge.
 - The reusable calibrated-2D package has transactional multi-file publication
   and signature-aware resume. Workbench existence-only resume is now disabled
   and hard-blocked, but no equivalent content-signature resume exists. The strict
@@ -153,6 +154,6 @@
   cancellable. Users should prefer headless workflows for unattended or large
   campaigns. `CAUTION` remains visible but is not separately persisted as an
   acknowledgement.
-- **Input resources**: not every Workbench FabIO path uses one common
-  copy-and-close helper. The strict readers exercised by the headless workflows
-  close their handles, and reviewers should use the documented portable fixtures.
+- **Input resources**: Workbench and headless detector readers share
+  `saxsabs.io.detector_images`. Reviewers should still use the documented
+  portable fixtures rather than private beamline files.

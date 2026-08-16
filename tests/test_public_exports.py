@@ -19,10 +19,15 @@ def test_core_reexports_recent_batch_helpers():
 
 def test_io_reexports_header_meta_helpers():
     import saxsabs.io as io
+    from saxsabs.io.detector_images import load_detector_image
     from saxsabs.io.parsers import extract_acquisition_timestamp, parse_header_values_with_meta
 
     assert io.parse_header_values_with_meta is parse_header_values_with_meta
     assert io.extract_acquisition_timestamp is extract_acquisition_timestamp
+    assert io.load_detector_image is load_detector_image
+    assert callable(io.load_detector_pixels)
+    assert callable(io.load_detector_header)
+    assert callable(io.close_image_handle)
 
 
 def test_top_level_reexports_scientific_safety_contracts():
