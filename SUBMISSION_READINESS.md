@@ -21,9 +21,11 @@ Updated: 16 August 2026 (Asia/Shanghai)
   requirements.
 - Paper: 1100-word body by the documented Pandoc method; 16 references; current
   Inara TeX and well-formed JATS resolve both figures.
-- Review PDF: three-pass LuaLaTeX build, 5 pages, 698,183 bytes; all five pages
-  rendered at 150 dpi and visually checked. The 1280 x 900 GUI image is a real,
-  reproducible full-window Workbench capture.
+- Review PDF: the official CI paper job produces a five-page draft whose pages,
+  bounds, figures, citations, and embedded fonts have been visually checked.
+  Exact run URL, byte size, and SHA-256 belong in the dated external validation
+  record because CI evidence must identify the submitted commit. The 1280 x 900
+  GUI image is a real, reproducible full-window Workbench capture.
 - Public CI gate: immediately before submission, the exact submitted HEAD must
   have green push and Draft-PR runs for the complete matrix. Immutable commit
   IDs and run URLs belong in the dated external validation record rather than
