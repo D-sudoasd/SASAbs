@@ -147,13 +147,14 @@ Archived earlier releases are collected in the Zenodo concept record
 
 The repository includes a strict BL19B2 batch workflow from detector images to
 exported results. Its deterministic example in `examples/minimal_2d/` plants
-synthetic dark, background, standard, and sample frames; recovers the planted
-$K$ and sample curve within script tolerances; writes labeled absolute text and
-canSAS XML (and NXcanSAS when `h5py` is present); and checks that the XML
-exposes `i_abs`, not `i_rel`. That example is a software golden test, not
-measured-beamline or third-party format validation. Automated tests cover
-numerical calculations, parsers, exporters, the command-line interface,
-launchers, and Workbench validation rules.
+synthetic dark, background, standard, and sample frames on a 9×9 array;
+subtracts a NIST blank in detector space; reduces with a homemade integer-bin
+radial average (not pyFAI); recovers the planted $K$ and sample curve within
+script tolerances; and writes labeled absolute text/XML with unknown
+uncertainty. It does not exercise the BL19B2 campaign runner or third-party
+format validation. Automated tests cover numerical calculations, parsers,
+exporters, the command-line interface, launchers, and Workbench validation
+rules.
 The repository configures continuous integration for Python 3.10--3.13 on Linux,
 Windows, and macOS.
 

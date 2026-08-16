@@ -25,13 +25,13 @@ Yes. Run:
 python examples/minimal_2d/run_minimal_2d_pipeline.py
 ```
 
-The script constructs independent dark, blank, SRM 3600, and sample frames,
-gates the standard profile as `relative` before $K$, writes labeled
-`absolute_cm^-1` outputs (CSV/TSV/canSAS XML and optional NXcanSAS HDF5),
-checks that the XML exposes `i_abs` not `i_rel`, and writes numerical K and
-sample-intensity errors to `summary.json`. This recovers a planted synthetic
-curve within script tolerances. It is a software golden test, not measured
-beamline validation or third-party format validation.
+The script constructs independent dark, blank, SRM 3600, and sample frames on a
+9×9 array, subtracts a NIST blank in detector space, reduces with a homemade
+integer-bin radial average (not pyFAI), gates the standard profile as
+`relative` before $K$, writes labeled `absolute_cm^-1` outputs with unknown
+uncertainty, and records those limits in `summary.json`. It does not run the
+BL19B2 campaign runner. This is a software golden test, not measured beamline
+validation or third-party format validation.
 
 ## Have the structured exports been checked outside the project readers?
 

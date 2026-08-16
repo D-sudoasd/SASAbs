@@ -122,8 +122,9 @@ not experimental evidence.
 
 ## Reproducible example
 
-The bundled example generates deterministic synthetic dark, background,
-standard, and sample frames, then runs the package reduction APIs:
+The bundled example plants deterministic synthetic dark, background,
+standard, and sample frames on a 9×9 array, subtracts a NIST blank in detector
+space, and reduces with a homemade integer-bin radial average (not pyFAI):
 
 ```bash
 python examples/minimal_2d/run_minimal_2d_pipeline.py
@@ -141,9 +142,10 @@ and expected files.
   <img src="assets/readme/kfactor-demo.png" width="92%" alt="Deterministic synthetic K-factor example showing retained and rejected ratios.">
 </p>
 
-> This example recovers a planted synthetic $K$ and sample curve and checks
-> labeled file content. It is not measured-beamline validation or independent
-> third-party format validation.
+> This example recovers a planted synthetic $K$ and sample curve from a 9×9
+> homemade radial average and checks labeled file content. It is not pyFAI
+> integration, BL19B2 campaign validation, measured-beamline validation, or
+> independent third-party format validation.
 
 ## Documentation
 

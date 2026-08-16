@@ -251,6 +251,34 @@ def test_cli_parse_external1d(tmp_path: Path, capsys: pytest.CaptureFixture[str]
     assert out["intensity_state"] == "ambiguous"
 
 
+def test_cli_estimate_k_refuses_i_abs_column_name(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    meas = tmp_path / "meas.csv"
+    ref = tmp_path / "ref.csv"
+    meas.write_text(
+        "Q_A^-1,I_abs\n0.01,17.1\n0.02,15.4\n0.05,13.4\n0.10,11.8\n",
+        encoding="utf-8",
+    )
+    ref.write_text(
+        "Q_A^-1,I_abs\n0.01,34.2\n0.02,30.8\n0.05,26.8\n0.10,23.6\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["saxsabs", "estimate-k", "--meas", str(meas), "--ref", str(ref)],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 1
+    assert "already absolute" in capsys.readouterr().err.lower()
+
+
 def test_cli_estimate_k_refuses_unlabeled_intensity(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

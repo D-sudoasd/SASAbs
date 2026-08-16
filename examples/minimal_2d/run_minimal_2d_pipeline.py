@@ -253,9 +253,14 @@ def run_pipeline(output_dir: Path) -> dict[str, object]:
     summary: dict[str, object] = {
         "validation_type": "deterministic_synthetic_raw_frames",
         "evidence": (
-            "planted synthetic K and sample curve recovered within script tolerances; "
-            "not measured-beamline or third-party format validation"
+            "9x9 homemade integer-bin radial average recovers planted K and sample "
+            "curve; not pyFAI, not the BL19B2 campaign runner, and not measured-beamline "
+            "or third-party format validation"
         ),
+        "detector_shape": list(source_image.shape),
+        "reduction": "homemade_integer_bin_radial_average",
+        "uses_pyfai": False,
+        "uses_bl19b2_campaign": False,
         "points": int(q.size),
         "q_min": float(q.min()),
         "q_max": float(q.max()),

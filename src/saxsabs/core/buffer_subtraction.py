@@ -33,7 +33,7 @@ class BufferSubtractionResult:
     q : np.ndarray
         Momentum-transfer values (Å⁻¹).
     i_subtracted : np.ndarray
-        Subtracted intensity (cm⁻¹ or relative).
+        Subtracted intensity on the required absolute cm⁻¹ scale.
     err_subtracted : np.ndarray
         Propagated uncertainty.
     alpha : float

@@ -190,6 +190,6 @@ for their full input contract and provenance requirements.
 These APIs provide software operations and checks; they do not establish that a
 beamline measurement is calibrated. Users remain responsible for appropriate
 reference standards, independently measured inputs, detector geometry, valid
-units, and experiment-specific acceptance. The included synthetic 2D example
-recovers a planted $K$ and sample curve and checks labeled file content; it is
-not experimental beamline validation.
+units, and experiment-specific acceptance. The included synthetic 2D example recovers a planted $K$ and sample curve from
+a 9×9 homemade radial average (not pyFAI) and checks labeled file content; it
+is not experimental beamline validation.
