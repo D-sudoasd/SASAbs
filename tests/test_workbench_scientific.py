@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import sys
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import numpy as np
 import pytest
@@ -2078,3 +2079,75 @@ def test_tab3_preflight_k_reader_handles_blank_default_without_crashing(
     else:
         assert value == pytest.approx(expected_value)
     assert message == (app.tr(message_key) if message_key is not None else None)
+
+
+def test_workbench_parse_header_closes_fabio_handle_and_reads_values(tmp_path, monkeypatch):
+    module = _load_workbench_module()
+    app = module.SAXSAbsWorkbenchApp.__new__(module.SAXSAbsWorkbenchApp)
+    path = tmp_path / "frame.tif"
+    path.write_bytes(b"placeholder")
+    opened = SimpleNamespace(
+        header={"ExposureTime": "1.0", "Monitor": "100", "Transmission": "0.8"},
+        data=np.ones((2, 2)),
+        close=Mock(),
+    )
+    monkeypatch.setattr(module.fabio, "open", lambda _path: opened)
+
+    exp, mon, trans = app.parse_header(str(path))
+
+    assert exp == pytest.approx(1.0)
+    assert mon == pytest.approx(100.0)
+    assert trans == pytest.approx(0.8)
+    opened.close.assert_called_once_with()
+
+
+def test_workbench_load_optional_array_closes_handle_and_returns_owned_copy(
+    tmp_path, monkeypatch
+):
+    module = _load_workbench_module()
+    app = module.SAXSAbsWorkbenchApp.__new__(module.SAXSAbsWorkbenchApp)
+    path = tmp_path / "mask.edf"
+    path.write_bytes(b"placeholder")
+    original = np.array([[1, 0]], dtype=np.uint8)
+    opened = SimpleNamespace(data=original, header={}, close=Mock())
+    monkeypatch.setattr(module.fabio, "open", lambda _path: opened)
+
+    arr = app.load_optional_array(str(path), "Mask")
+    original[0, 0] = 99
+
+    np.testing.assert_array_equal(arr, [[1, 0]])
+    opened.close.assert_called_once_with()
+
+
+def test_workbench_load_optional_array_closes_handle_after_read_failure(
+    tmp_path, monkeypatch
+):
+    module = _load_workbench_module()
+    app = module.SAXSAbsWorkbenchApp.__new__(module.SAXSAbsWorkbenchApp)
+    path = tmp_path / "mask.edf"
+    path.write_bytes(b"placeholder")
+    opened = SimpleNamespace(close=Mock())
+
+    class BrokenData:
+        @property
+        def data(self):
+            raise RuntimeError("broken mask data")
+
+        header = {}
+        close = opened.close
+
+    monkeypatch.setattr(module.fabio, "open", lambda _path: BrokenData())
+
+    with pytest.raises(RuntimeError, match="broken mask data"):
+        app.load_optional_array(str(path), "Mask")
+    opened.close.assert_called_once_with()
+
+
+def test_workbench_load_optional_array_refuses_pickled_npy(tmp_path):
+    module = _load_workbench_module()
+    app = module.SAXSAbsWorkbenchApp.__new__(module.SAXSAbsWorkbenchApp)
+    path = tmp_path / "mask.npy"
+    np.save(path, np.array([{"unsafe": True}], dtype=object), allow_pickle=True)
+
+    with pytest.raises(ValueError):
+        app.load_optional_array(str(path), "Mask")

@@ -1,3 +1,10 @@
+from .detector_images import (
+    DetectorImageLoad,
+    close_image_handle,
+    load_detector_header,
+    load_detector_image,
+    load_detector_pixels,
+)
 from .parsers import (
     extract_acquisition_timestamp,
     parse_header_values,
@@ -18,6 +25,11 @@ from .calibrated2d import (
 )
 
 __all__ = [
+    "DetectorImageLoad",
+    "close_image_handle",
+    "load_detector_header",
+    "load_detector_image",
+    "load_detector_pixels",
     "parse_header_values",
     "parse_header_values_with_meta",
     "extract_acquisition_timestamp",

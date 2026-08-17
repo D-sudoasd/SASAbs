@@ -20,6 +20,8 @@ from typing import Any
 
 import numpy as np
 
+from saxsabs.io.detector_images import load_detector_image, load_detector_pixels
+
 
 SCHEMA_VERSION = "saxsabs.bl19b2_integrate1d.v1"
 SUCCESS_STATUSES = frozenset({"success", "processed", "skipped_existing", "success_existing"})
@@ -204,16 +206,9 @@ def _load_mask(path: Path) -> np.ndarray:
         value = np.load(path, allow_pickle=False)
     else:
         try:
-            import fabio
+            value = load_detector_pixels(path, dtype=None)
         except ImportError as exc:  # pragma: no cover
             raise ImportError("fabio is required to read the BL19B2 EDF mask") from exc
-        image = fabio.open(str(path))
-        try:
-            value = np.asarray(image.data)
-        finally:
-            close = getattr(image, "close", None)
-            if callable(close):
-                close()
     if value.ndim != 2 or not np.all(np.isfinite(value)):
         raise ValueError("integration mask must be a finite 2D array")
     return (np.asarray(value) != 0).astype(np.uint8)
@@ -344,17 +339,11 @@ def _validate_metadata(
 
 def _load_validate_edf(item: _InputRow, metadata: dict[str, Any], mask: np.ndarray) -> np.ndarray:
     try:
-        import fabio
+        loaded = load_detector_image(item.edf, dtype=None)
     except ImportError as exc:  # pragma: no cover
         raise ImportError("fabio is required for BL19B2 EDF integration") from exc
-    image_file = fabio.open(str(item.edf))
-    try:
-        image = np.asarray(image_file.data)
-        header = image_file.header
-    finally:
-        close = getattr(image_file, "close", None)
-        if callable(close):
-            close()
+    image = np.asarray(loaded.data)
+    header = loaded.header
     if image.shape != mask.shape:
         raise ValueError(f"EDF/mask shape mismatch for {item.relative_path}: {image.shape} vs {mask.shape}")
     if header.get("ProcessingSignature") != item.processing_signature:

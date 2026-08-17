@@ -200,7 +200,9 @@ applicable:
   content-signature resume (existence-only resume must remain disabled);
 - Workbench preflight binds critical file content hashes and persists explicit
   CAUTION acceptance;
-- all FabIO readers pass normal and exceptional close tests on Windows;
+- all FabIO readers pass OS-level handle audits on every Windows workstation
+  (unit tests now cover the shared copy-and-close helper; a full desktop
+  handle audit remains a local check);
 - a cancellable background JobController keeps long jobs off the Tk UI thread.
 
 ## Notes
