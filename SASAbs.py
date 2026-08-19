@@ -351,6 +351,14 @@ I18N = {
         "lbl_t3_buffer_file": "Buffer 1D file:",
         "lbl_t3_alpha": "\u03b1 (scale):",
         "lbl_t3_buffer_status": "(not loaded)",
+        "lf_t3_fluo": "Fluorescence subtraction",
+        "cb_t3_fluo_enable": "Enable fluorescence subtraction",
+        "lbl_t3_fluo_method": "Method:",
+        "lbl_t3_fluo_f0": "F0 (cm\u207b\xb9):",
+        "lbl_t3_fluo_file": "Measured F(q) file:",
+        "lbl_t3_fluo_status": "(not loaded)",
+        "lf_t2_fluo": "Fluorescence subtraction (1D)",
+        "cb_t2_fluo_enable": "Enable fluorescence subtraction",
         "lbl_t2_alpha": "BG \u03b1-scale:",
         "cb_t2_buffer_enable": "Enable BG \u03b1-scaling",
         # --- Output format ---
@@ -738,6 +746,14 @@ I18N = {
         "lbl_t3_buffer_file": "缓冲液1D文件:",
         "lbl_t3_alpha": "\u03b1 (缩放):",
         "lbl_t3_buffer_status": "(未加载)",
+        "lf_t3_fluo": "荧光扣除",
+        "cb_t3_fluo_enable": "启用荧光扣除",
+        "lbl_t3_fluo_method": "方法:",
+        "lbl_t3_fluo_f0": "F0 (cm\u207b\xb9):",
+        "lbl_t3_fluo_file": "实测 F(q) 文件:",
+        "lbl_t3_fluo_status": "(未加载)",
+        "lf_t2_fluo": "荧光扣除（1D）",
+        "cb_t2_fluo_enable": "启用荧光扣除",
         "lbl_t2_alpha": "背景 \u03b1缩放:",
         "cb_t2_buffer_enable": "启用背景 \u03b1-缩放",
         # --- 输出格式 ---
@@ -935,6 +951,13 @@ I18N["en"].update({
         "Leave u(\u03b1) blank when unknown; combined uncertainty stays NaN and is "
         "never assumed to be zero."
     ),
+    "lbl_t3_fluo_f0_uncertainty": "u(F0), optional:",
+    "lbl_t3_fluo_beta": "\u03b2 (scale):",
+    "lbl_t3_fluo_window": "High-q window:",
+    "hint_t3_fluo": (
+        "Opt-in additive correction on absolute cm^-1 after K/thickness and optional "
+        "buffer. High-q methods are valid only where elastic SAXS is negligible."
+    ),
 })
 I18N["zh"].update({
     "lbl_k_record_readonly": "\u53ea\u8bfb\uff1b\u7531 Tab1 \u751f\u6210\uff08\u987b\u901a\u8fc7\u9884\u68c0\uff09",
@@ -1023,6 +1046,13 @@ I18N["zh"].update({
     "lbl_t3_alpha_uncertainty": "u(\u03b1)\uff08\u53ef\u9009\uff09:",
     "hint_t3_alpha_uncertainty": (
         "u(\u03b1) \u672a\u77e5\u65f6\u7559\u7a7a\uff1b\u5408\u6210\u4e0d\u786e\u5b9a\u5ea6\u4fdd\u6301 NaN\uff0c\u7edd\u4e0d\u9ed8\u8ba4\u4e3a 0\u3002"
+    ),
+    "lbl_t3_fluo_f0_uncertainty": "u(F0)\uff08\u53ef\u9009\uff09:",
+    "lbl_t3_fluo_beta": "\u03b2 (\u7f29\u653e):",
+    "lbl_t3_fluo_window": "\u9ad8 q \u7a97\u53e3:",
+    "hint_t3_fluo": (
+        "\u7edd\u5bf9 cm^-1 \u4e0a\u7684\u53ef\u9009\u52a0\u6027\u6263\u9664\uff0c\u4f4d\u4e8e K/\u539a\u5ea6\u4e0e\u53ef\u9009 buffer \u4e4b\u540e\u3002"
+        "\u4ec5\u5f53\u9ad8 q \u7a97\u5185\u5f39\u6027 SAXS \u53ef\u5ffd\u7565\u65f6\uff0chigh-q \u65b9\u6cd5\u624d\u6210\u7acb\u3002"
     ),
 })
 
@@ -1284,6 +1314,15 @@ except Exception:
     subtract_buffer = None
 
 try:
+    from saxsabs.core.fluorescence_subtraction import (
+        combine_sequential_standard_uncertainties,
+        subtract_fluorescence,
+    )
+except Exception:
+    subtract_fluorescence = None
+    combine_sequential_standard_uncertainties = None
+
+try:
     from saxsabs.core.execution_policy import (
         parse_run_policy,
         resolve_output_path_for_write,
@@ -1325,11 +1364,13 @@ except Exception:
 try:
     from saxsabs.core.intensity_state import (
         require_absolute_input_for_buffer_subtraction,
+        require_absolute_input_for_fluorescence_subtraction,
         require_relative_input_for_absolute_scaling,
         serialize_correction_ledger,
     )
 except ImportError:
     require_absolute_input_for_buffer_subtraction = None
+    require_absolute_input_for_fluorescence_subtraction = None
     require_relative_input_for_absolute_scaling = None
     serialize_correction_ledger = None
 
@@ -3579,6 +3620,7 @@ class SAXSAbsWorkbenchApp:
         calibration_context=None,
         *,
         corrections_applied=None,
+        extra_corrections=None,
         k_factor=None,
         thickness_cm=None,
         thickness_source=None,
@@ -3615,6 +3657,8 @@ class SAXSAbsWorkbenchApp:
                 corrections.append("flat_field")
         else:
             corrections = list(corrections_applied)
+        if extra_corrections:
+            corrections = list(corrections) + list(extra_corrections)
         serialized_corrections = serialize_correction_ledger(corrections)
         if k_factor is None:
             k_var = getattr(self, "global_vars", {}).get("k_factor")
@@ -3654,6 +3698,7 @@ class SAXSAbsWorkbenchApp:
         run_policy=None,
         calibration_context=None,
         corrections_applied=None,
+        extra_corrections=None,
         combined_uncertainty=None,
         uncertainty_metadata=None,
         thickness_cm=None,
@@ -3680,6 +3725,7 @@ class SAXSAbsWorkbenchApp:
         profile_metadata = self.profile_operator_metadata(
             calibration_context,
             corrections_applied=corrections_applied,
+            extra_corrections=extra_corrections,
             thickness_cm=thickness_cm,
             thickness_source=thickness_source,
         )
@@ -3745,6 +3791,14 @@ class SAXSAbsWorkbenchApp:
                 "buffer_source_sha256",
                 "buffer_alpha",
                 "buffer_alpha_uncertainty",
+                "fluorescence_method",
+                "fluorescence_f0",
+                "fluorescence_f0_uncertainty",
+                "fluorescence_beta",
+                "fluorescence_beta_uncertainty",
+                "fluorescence_high_q_window",
+                "fluorescence_source_name",
+                "fluorescence_source_sha256",
                 "uncertainty_model",
                 "uncertainty_type",
             ):
@@ -4225,6 +4279,16 @@ class SAXSAbsWorkbenchApp:
         self.t2_instr_tol_pct = tk.DoubleVar(value=0.5)
         self.t2_alpha = tk.DoubleVar(value=1.0)
         self.t2_alpha_enabled = tk.BooleanVar(value=False)
+        self.t2_fluo_enabled = tk.BooleanVar(value=False)
+        self.t2_fluo_method = tk.StringVar(value="constant")
+        self.t2_fluo_f0 = tk.StringVar(value="")
+        self.t2_fluo_f0_uncertainty = tk.StringVar(value="")
+        self.t2_fluo_beta = tk.DoubleVar(value=1.0)
+        self.t2_fluo_beta_uncertainty = tk.StringVar(value="")
+        self.t2_fluo_qmin = tk.StringVar(value="")
+        self.t2_fluo_qmax = tk.StringVar(value="")
+        self.t2_fluo_path = tk.StringVar()
+        self.t2_fluo_status = tk.StringVar(value=self.tr("lbl_t3_fluo_status"))
         self.t2_output_format = tk.StringVar(value="tsv")
         self.t2_export_cal2d = tk.BooleanVar(value=False)
         self.t2_cal2d_dtype = tk.StringVar(value="float32")
@@ -4575,6 +4639,38 @@ class SAXSAbsWorkbenchApp:
         self._register_i18n_widget(lbl_a2, "lbl_t2_alpha")
         ttk.Entry(row_alpha_fmt, textvariable=self.t2_alpha, width=6).pack(side="left")
 
+        fluo2 = ttk.LabelFrame(c5, text=self.tr("lf_t2_fluo"), style="Group.TLabelframe")
+        fluo2.pack(fill="x", pady=(4, 0))
+        self._register_i18n_widget(fluo2, "lf_t2_fluo")
+        cb_fluo2 = ttk.Checkbutton(
+            fluo2, text=self.tr("cb_t2_fluo_enable"), variable=self.t2_fluo_enabled
+        )
+        cb_fluo2.pack(anchor="w")
+        self._register_i18n_widget(cb_fluo2, "cb_t2_fluo_enable")
+        row_fluo2 = ttk.Frame(fluo2)
+        row_fluo2.pack(fill="x")
+        ttk.Combobox(
+            row_fluo2,
+            textvariable=self.t2_fluo_method,
+            values=["constant", "high_q_mean", "high_q_median", "measured"],
+            width=16,
+            state="readonly",
+        ).pack(side="left", padx=3)
+        ttk.Entry(row_fluo2, textvariable=self.t2_fluo_f0, width=8).pack(side="left", padx=3)
+        ttk.Entry(row_fluo2, textvariable=self.t2_fluo_f0_uncertainty, width=8).pack(
+            side="left", padx=3
+        )
+        ttk.Entry(row_fluo2, textvariable=self.t2_fluo_beta, width=6).pack(side="left", padx=3)
+        ttk.Entry(row_fluo2, textvariable=self.t2_fluo_beta_uncertainty, width=6).pack(
+            side="left", padx=3
+        )
+        ttk.Entry(row_fluo2, textvariable=self.t2_fluo_qmin, width=6).pack(side="left", padx=2)
+        ttk.Entry(row_fluo2, textvariable=self.t2_fluo_qmax, width=6).pack(side="left", padx=2)
+        self.add_file_row(
+            fluo2, self.tr("lbl_t3_fluo_file"), self.t2_fluo_path, "*.dat *.txt *.csv *.xml"
+        )
+        ttk.Label(fluo2, textvariable=self.t2_fluo_status, style="Hint.TLabel").pack(anchor="w")
+
         row_fmt2 = ttk.Frame(c5)
         row_fmt2.pack(fill="x", pady=(2, 0))
         lbl_ofmt2 = ttk.Label(row_fmt2, text=self.tr("lbl_output_format"))
@@ -4711,6 +4807,15 @@ class SAXSAbsWorkbenchApp:
                 self.t2_instr_tol_pct,
                 self.t2_alpha,
                 self.t2_alpha_enabled,
+                self.t2_fluo_enabled,
+                self.t2_fluo_method,
+                self.t2_fluo_f0,
+                self.t2_fluo_f0_uncertainty,
+                self.t2_fluo_beta,
+                self.t2_fluo_beta_uncertainty,
+                self.t2_fluo_qmin,
+                self.t2_fluo_qmax,
+                self.t2_fluo_path,
                 self.t2_output_format,
                 self.t2_export_cal2d,
                 self.t2_cal2d_dtype,
@@ -4977,6 +5082,70 @@ class SAXSAbsWorkbenchApp:
         self.add_hint(buf_frame, "hint_t3_alpha_uncertainty", wraplength=360)
         ttk.Label(buf_frame, textvariable=self.t3_buffer_status, style="Hint.TLabel").pack(anchor="w", padx=3)
 
+        self.t3_fluo_enabled = tk.BooleanVar(value=False)
+        self.t3_fluo_method = tk.StringVar(value="constant")
+        self.t3_fluo_f0 = tk.StringVar(value="")
+        self.t3_fluo_f0_uncertainty = tk.StringVar(value="")
+        self.t3_fluo_beta = tk.DoubleVar(value=1.0)
+        self.t3_fluo_beta_uncertainty = tk.StringVar(value="")
+        self.t3_fluo_qmin = tk.StringVar(value="")
+        self.t3_fluo_qmax = tk.StringVar(value="")
+        self.t3_fluo_path = tk.StringVar()
+        self.t3_fluo_status = tk.StringVar(value=self.tr("lbl_t3_fluo_status"))
+
+        fluo_frame = ttk.LabelFrame(top, text=self.tr("lf_t3_fluo"), style="Group.TLabelframe")
+        fluo_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=5, pady=4)
+        self._register_i18n_widget(fluo_frame, "lf_t3_fluo")
+        cb_fluo = ttk.Checkbutton(
+            fluo_frame, text=self.tr("cb_t3_fluo_enable"), variable=self.t3_fluo_enabled
+        )
+        cb_fluo.pack(anchor="w", padx=3, pady=2)
+        self._register_i18n_widget(cb_fluo, "cb_t3_fluo_enable")
+        row_fluo_m = ttk.Frame(fluo_frame)
+        row_fluo_m.pack(fill="x", pady=1)
+        lbl_fluo_m = ttk.Label(row_fluo_m, text=self.tr("lbl_t3_fluo_method"))
+        lbl_fluo_m.pack(side="left")
+        self._register_i18n_widget(lbl_fluo_m, "lbl_t3_fluo_method")
+        self.t3_fluo_method_combo = ttk.Combobox(
+            row_fluo_m,
+            textvariable=self.t3_fluo_method,
+            values=["constant", "high_q_mean", "high_q_median", "measured"],
+            width=16,
+            state="readonly",
+        )
+        self.t3_fluo_method_combo.pack(side="left", padx=5)
+        lbl_fluo_f0 = ttk.Label(row_fluo_m, text=self.tr("lbl_t3_fluo_f0"))
+        lbl_fluo_f0.pack(side="left", padx=(8, 0))
+        self._register_i18n_widget(lbl_fluo_f0, "lbl_t3_fluo_f0")
+        ttk.Entry(row_fluo_m, textvariable=self.t3_fluo_f0, width=8).pack(side="left", padx=5)
+        lbl_fluo_f0u = ttk.Label(row_fluo_m, text=self.tr("lbl_t3_fluo_f0_uncertainty"))
+        lbl_fluo_f0u.pack(side="left")
+        self._register_i18n_widget(lbl_fluo_f0u, "lbl_t3_fluo_f0_uncertainty")
+        ttk.Entry(row_fluo_m, textvariable=self.t3_fluo_f0_uncertainty, width=8).pack(
+            side="left", padx=5
+        )
+        row_fluo_b = ttk.Frame(fluo_frame)
+        row_fluo_b.pack(fill="x", pady=1)
+        lbl_fluo_b = ttk.Label(row_fluo_b, text=self.tr("lbl_t3_fluo_beta"))
+        lbl_fluo_b.pack(side="left")
+        self._register_i18n_widget(lbl_fluo_b, "lbl_t3_fluo_beta")
+        ttk.Entry(row_fluo_b, textvariable=self.t3_fluo_beta, width=8).pack(side="left", padx=5)
+        ttk.Entry(row_fluo_b, textvariable=self.t3_fluo_beta_uncertainty, width=8).pack(
+            side="left", padx=5
+        )
+        lbl_fluo_w = ttk.Label(row_fluo_b, text=self.tr("lbl_t3_fluo_window"))
+        lbl_fluo_w.pack(side="left", padx=(8, 0))
+        self._register_i18n_widget(lbl_fluo_w, "lbl_t3_fluo_window")
+        ttk.Entry(row_fluo_b, textvariable=self.t3_fluo_qmin, width=8).pack(side="left", padx=2)
+        ttk.Entry(row_fluo_b, textvariable=self.t3_fluo_qmax, width=8).pack(side="left", padx=2)
+        self.add_file_row(
+            fluo_frame, self.tr("lbl_t3_fluo_file"), self.t3_fluo_path, "*.dat *.txt *.csv *.xml"
+        )
+        self.add_hint(fluo_frame, "hint_t3_fluo", wraplength=720)
+        ttk.Label(fluo_frame, textvariable=self.t3_fluo_status, style="Hint.TLabel").pack(
+            anchor="w", padx=3
+        )
+
         # ---- Output format selector ----
         self.t3_output_format = tk.StringVar(value="tsv")
         fmt_row = ttk.Frame(buf_frame)
@@ -5075,6 +5244,15 @@ class SAXSAbsWorkbenchApp:
                 self.t3_buffer_path,
                 self.t3_alpha,
                 self.t3_alpha_uncertainty,
+                self.t3_fluo_enabled,
+                self.t3_fluo_method,
+                self.t3_fluo_f0,
+                self.t3_fluo_f0_uncertainty,
+                self.t3_fluo_beta,
+                self.t3_fluo_beta_uncertainty,
+                self.t3_fluo_qmin,
+                self.t3_fluo_qmax,
+                self.t3_fluo_path,
                 self.t3_output_format,
             ],
         )
@@ -5213,6 +5391,7 @@ class SAXSAbsWorkbenchApp:
         *,
         correction_mode=None,
         apply_buffer=False,
+        apply_fluorescence=False,
     ):
         """Validate the exact Tab3 operators before changing an external profile."""
         if require_relative_input_for_absolute_scaling is None:
@@ -5231,6 +5410,8 @@ class SAXSAbsWorkbenchApp:
             raise ValueError(f"{profile_name}: unknown correction mode: {mode}")
         if apply_buffer:
             corrections_to_apply.append("buffer")
+        if apply_fluorescence:
+            corrections_to_apply.append("fluorescence")
         assessment = require_relative_input_for_absolute_scaling(
             profile,
             profile_name=profile_name,
@@ -5761,6 +5942,278 @@ class SAXSAbsWorkbenchApp:
             result.i_subtracted,
             result.err_statistical,
             result.err_subtracted,
+        )
+
+    @staticmethod
+    def disabled_fluorescence_payload():
+        return {
+            "enabled": False,
+            "method": None,
+            "path": "",
+            "sha256": None,
+            "f0": None,
+            "f0_uncertainty": None,
+            "beta": None,
+            "beta_uncertainty": None,
+            "high_q_window": None,
+            "profile": None,
+        }
+
+    @staticmethod
+    def external_fluorescence_audit_payload(fluo_info):
+        return {
+            "enabled": bool(fluo_info.get("enabled", False)),
+            "method": fluo_info.get("method"),
+            "path": str(fluo_info.get("path") or ""),
+            "sha256": fluo_info.get("sha256"),
+            "f0": fluo_info.get("f0"),
+            "f0_uncertainty": fluo_info.get("f0_uncertainty"),
+            "beta": fluo_info.get("beta"),
+            "beta_uncertainty": fluo_info.get("beta_uncertainty"),
+            "high_q_window": fluo_info.get("high_q_window"),
+        }
+
+    @staticmethod
+    def parse_optional_nonnegative_uncertainty(value, *, label):
+        text = str(value if value is not None else "").strip()
+        if not text:
+            return None
+        try:
+            uncertainty = float(text)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{label} must be numeric") from exc
+        if not np.isfinite(uncertainty) or uncertainty < 0:
+            raise ValueError(f"{label} must be finite and >= 0")
+        return uncertainty
+
+    @staticmethod
+    def parse_optional_window(qmin_value, qmax_value):
+        qmin_text = str(qmin_value if qmin_value is not None else "").strip()
+        qmax_text = str(qmax_value if qmax_value is not None else "").strip()
+        if not qmin_text and not qmax_text:
+            return None
+        if not qmin_text or not qmax_text:
+            raise ValueError("high-q window requires both qmin and qmax")
+        qmin = float(qmin_text)
+        qmax = float(qmax_text)
+        if not np.isfinite(qmin) or not np.isfinite(qmax) or qmin >= qmax:
+            raise ValueError("high-q window must contain two finite increasing values")
+        return (qmin, qmax)
+
+    def prepare_workbench_fluorescence(
+        self,
+        *,
+        source="t3",
+        pipeline_mode="scaled",
+        calibration_context=None,
+        k_factor=None,
+        require_scaled_pipeline=True,
+    ):
+        """Load optional fluorescence settings; default is disabled."""
+        status_var = getattr(self, f"{source}_fluo_status", None)
+
+        def set_status(value):
+            if status_var is not None:
+                try:
+                    status_var.set(value)
+                except Exception:
+                    pass
+
+        enabled_var = getattr(self, f"{source}_fluo_enabled", None)
+        enabled = bool(enabled_var.get()) if enabled_var is not None else False
+        if not enabled:
+            set_status("Fluorescence: disabled")
+            return self.disabled_fluorescence_payload()
+
+        try:
+            if require_scaled_pipeline and str(pipeline_mode or "").strip().lower() != "scaled":
+                raise ValueError(
+                    "raw 流程下禁止荧光扣除；荧光必须作用在绝对强度标度上。"
+                )
+            method = str(getattr(self, f"{source}_fluo_method").get()).strip().lower()
+            beta = float(getattr(self, f"{source}_fluo_beta").get())
+            if not np.isfinite(beta) or beta <= 0:
+                raise ValueError("Fluorescence beta must be finite and > 0")
+            f0_text = str(getattr(self, f"{source}_fluo_f0").get()).strip()
+            f0 = float(f0_text) if f0_text else None
+            f0_uncertainty = self.parse_optional_nonnegative_uncertainty(
+                getattr(self, f"{source}_fluo_f0_uncertainty").get(),
+                label="Fluorescence F0 uncertainty",
+            )
+            beta_uncertainty = self.parse_optional_nonnegative_uncertainty(
+                getattr(self, f"{source}_fluo_beta_uncertainty").get(),
+                label="Fluorescence beta uncertainty",
+            )
+            high_q_window = self.parse_optional_window(
+                getattr(self, f"{source}_fluo_qmin").get(),
+                getattr(self, f"{source}_fluo_qmax").get(),
+            )
+            path_text = str(getattr(self, f"{source}_fluo_path").get()).strip()
+            profile = None
+            digest = None
+            resolved_path = ""
+            if method == "measured":
+                if calibration_context is None:
+                    raise ValueError("Measured fluorescence requires a valid CalibrationContext.")
+                active_k = float(k_factor)
+                if not np.isfinite(active_k) or active_k <= 0:
+                    raise ValueError("Measured fluorescence requires finite positive active K")
+                if not path_text:
+                    raise ValueError("已启用 measured 荧光扣除，但未选择荧光曲线。")
+                if require_absolute_input_for_fluorescence_subtraction is None:
+                    raise RuntimeError("fluorescence-state validation is unavailable")
+                fluo_path = Path(path_text).expanduser().resolve()
+                profile = self.prepare_external_profile_axis(
+                    fluo_path, self.read_external_1d_profile(fluo_path)
+                )
+                require_absolute_input_for_fluorescence_subtraction(
+                    profile, profile_name="Fluorescence"
+                )
+                self.require_external_profile_operator_provenance(
+                    profile,
+                    calibration_context,
+                    "Fluorescence",
+                    require_full_context_fingerprint=True,
+                    required_k_factor=active_k,
+                )
+                digest = self._optional_file_sha256(fluo_path)
+                resolved_path = str(fluo_path)
+                set_status(f"Fluorescence loaded: {fluo_path.name} ({len(profile['x'])} points)")
+            else:
+                set_status(f"Fluorescence method: {method}")
+            return {
+                "enabled": True,
+                "method": method,
+                "path": resolved_path,
+                "sha256": digest,
+                "f0": f0,
+                "f0_uncertainty": f0_uncertainty,
+                "beta": beta,
+                "beta_uncertainty": beta_uncertainty,
+                "high_q_window": high_q_window,
+                "profile": profile,
+            }
+        except Exception as exc:
+            set_status(f"Fluorescence error: {exc}")
+            raise
+
+    @staticmethod
+    def fluorescence_uncertainty_metadata(fluo_info, result):
+        model = "u_combined^2=u_sample^2+beta^2*u_F^2+F^2*u_beta^2"
+        unknown = (
+            fluo_info.get("beta_uncertainty") is None
+            or (
+                str(fluo_info.get("method") or "") not in {"measured", "measured_profile"}
+                and fluo_info.get("f0_uncertainty") is None
+            )
+        )
+        payload = {
+            "fluorescence_method": result.method,
+            "fluorescence_f0": repr(float(result.f0)),
+            "fluorescence_f0_uncertainty": (
+                "unknown"
+                if result.f0_uncertainty is None
+                else repr(float(result.f0_uncertainty))
+            ),
+            "fluorescence_beta": repr(float(result.beta)),
+            "fluorescence_beta_uncertainty": (
+                "unknown"
+                if result.beta_uncertainty is None
+                else repr(float(result.beta_uncertainty))
+            ),
+            "uncertainty_model": model,
+            "uncertainty_type": (
+                "combined_standard_unknown_fluorescence"
+                if unknown
+                else "combined_standard"
+            ),
+        }
+        if result.high_q_window is not None:
+            payload["fluorescence_high_q_window"] = (
+                f"{result.high_q_window[0]:.17g},{result.high_q_window[1]:.17g}"
+            )
+        if fluo_info.get("path"):
+            payload["fluorescence_source_name"] = Path(fluo_info["path"]).name
+            payload["fluorescence_source_sha256"] = fluo_info.get("sha256")
+        return payload
+
+    @staticmethod
+    def merge_uncertainty_metadata(existing, extra):
+        merged = dict(existing or {})
+        extra = dict(extra or {})
+        old_model = merged.get("uncertainty_model")
+        new_model = extra.get("uncertainty_model")
+        if old_model and new_model and old_model != new_model:
+            extra["uncertainty_model"] = f"{old_model};{new_model}"
+        previous_type = str(merged.get("uncertainty_type") or "")
+        extra_type = str(extra.get("uncertainty_type") or "")
+        merged.update(extra)
+        if "unknown" in previous_type or "unknown" in extra_type:
+            merged["uncertainty_type"] = "combined_standard_unknown"
+        return merged
+
+    @staticmethod
+    def subtract_external_absolute_fluorescence(
+        sample_q,
+        sample_i,
+        sample_err,
+        fluo_info,
+        sample_profile=None,
+    ):
+        """Apply the single audited fluorescence kernel; never use a weaker fallback."""
+
+        if subtract_fluorescence is None:
+            raise RuntimeError("formal fluorescence subtraction kernel is unavailable")
+        if sample_profile is None:
+            sample_profile = {
+                "intensity_state": "absolute_cm^-1",
+                "intensity_unit": "1/cm",
+                "i_col": "I_abs_cm^-1",
+                "operator_provenance": {
+                    "intensity_state": "absolute_cm^-1",
+                    "corrections_applied": '["k","thickness"]',
+                },
+            }
+        fluo_profile = fluo_info.get("profile")
+        q_f = i_f = e_f = None
+        if fluo_profile is not None:
+            q_f = np.asarray(fluo_profile["x"], dtype=np.float64)
+            i_f = _profile_intensity(fluo_profile)
+            e_f = _profile_uncertainty(fluo_profile)
+        result = subtract_fluorescence(
+            np.asarray(sample_q, dtype=np.float64),
+            np.asarray(sample_i, dtype=np.float64),
+            np.asarray(sample_err, dtype=np.float64),
+            sample_profile=sample_profile,
+            method=fluo_info["method"],
+            f0=fluo_info.get("f0"),
+            f0_uncertainty=fluo_info.get("f0_uncertainty"),
+            beta=fluo_info.get("beta") if fluo_info.get("beta") is not None else 1.0,
+            beta_uncertainty=fluo_info.get("beta_uncertainty"),
+            high_q_window=fluo_info.get("high_q_window"),
+            q_fluorescence=q_f,
+            i_fluorescence=i_f,
+            err_fluorescence=e_f,
+            fluorescence_profile=fluo_profile,
+        )
+        if result.err_statistical is None:
+            raise RuntimeError("fluorescence kernel did not return statistical uncertainty")
+        return result
+
+    def apply_workbench_fluorescence_to_profile(self, q, i_abs, i_err, fluo_info):
+        """Apply optional fluorescence on an absolute 1-D profile."""
+
+        if not fluo_info or not fluo_info.get("enabled"):
+            return i_abs, i_err, None, None, ()
+        result = self.subtract_external_absolute_fluorescence(
+            q, i_abs, i_err, fluo_info
+        )
+        return (
+            result.i_subtracted,
+            result.err_statistical,
+            result.err_subtracted,
+            self.fluorescence_uncertainty_metadata(fluo_info, result),
+            ("fluorescence",),
         )
 
     def _regularize_xy_triplet(self, x, y, e=None, min_points=3, name="profile"):
@@ -6407,7 +6860,10 @@ class SAXSAbsWorkbenchApp:
 
         buffer_var = getattr(self, "t3_buffer_enabled", None)
         buffer_enabled = bool(buffer_var.get()) if buffer_var is not None else False
+        fluo_var = getattr(self, "t3_fluo_enabled", None)
+        fluorescence_enabled = bool(fluo_var.get()) if fluo_var is not None else False
         buffer_info = {"enabled": False, "profile": None}
+        fluorescence_gate_error = None
         try:
             buffer_info = self.prepare_external_buffer(
                 pipeline_mode=pipeline_mode,
@@ -6417,6 +6873,17 @@ class SAXSAbsWorkbenchApp:
         except (OSError, RuntimeError, TypeError, ValueError) as exc:
             buffer_gate_error = str(exc)
             warnings.append(buffer_gate_error)
+
+        try:
+            self.prepare_workbench_fluorescence(
+                source="t3",
+                pipeline_mode=pipeline_mode,
+                calibration_context=active_calibration_context,
+                k_factor=k,
+            )
+        except (OSError, RuntimeError, TypeError, ValueError) as exc:
+            fluorescence_gate_error = str(exc)
+            warnings.append(fluorescence_gate_error)
 
         meta_map = {}
         bg_prof = None
@@ -6478,6 +6945,7 @@ class SAXSAbsWorkbenchApp:
                     Path(fp).name,
                     correction_mode=mode,
                     apply_buffer=buffer_enabled,
+                    apply_fluorescence=fluorescence_enabled,
                 )
                 x_label = prof["x_label"]
                 x_conversion = prof["x_conversion"]
@@ -6582,6 +7050,7 @@ class SAXSAbsWorkbenchApp:
                 k_trust_error,
                 thickness_gate_error,
                 buffer_gate_error,
+                fluorescence_gate_error,
                 resume_gate_error,
             )
         ):
@@ -6672,6 +7141,15 @@ class SAXSAbsWorkbenchApp:
                 k_factor=k,
             )
             buffer_audit = self.external_buffer_audit_payload(buffer_info)
+            fluorescence_info = self.prepare_workbench_fluorescence(
+                source="t3",
+                pipeline_mode=pipeline_mode,
+                calibration_context=active_calibration_context,
+                k_factor=k,
+            )
+            fluorescence_audit = self.external_fluorescence_audit_payload(
+                fluorescence_info
+            )
 
             meta_map = {}
             bg_prof = None
@@ -6748,6 +7226,7 @@ class SAXSAbsWorkbenchApp:
                 x_conversion = ""
                 operator_fingerprint = ""
                 buffer_applied = False
+                fluorescence_applied = False
                 scale_factor = scale_factor_global if pipeline_mode == "scaled" else np.nan
                 thk_cm_used = fixed_thk_cm if pipeline_mode == "scaled" else np.nan
                 norm_s = np.nan
@@ -6766,6 +7245,7 @@ class SAXSAbsWorkbenchApp:
                         Path(fp).name,
                         correction_mode=corr_mode,
                         apply_buffer=bool(buffer_info["enabled"]),
+                        apply_fluorescence=bool(fluorescence_info["enabled"]),
                     )
                     points = len(prof["x"])
                     x_label = prof["x_label"]
@@ -6909,6 +7389,54 @@ class SAXSAbsWorkbenchApp:
                                 ),
                             }
 
+                        if fluorescence_info["enabled"]:
+                            fluo_ledger = list(input_state.corrections_applied) + ["k"]
+                            if corr_mode == "k_over_d":
+                                fluo_ledger.append("thickness")
+                            if buffer_info["enabled"]:
+                                fluo_ledger.append("buffer")
+                            fluo_sample_profile = {
+                                "intensity_state": "absolute_cm^-1",
+                                "intensity_unit": "1/cm",
+                                "i_col": "I_abs_cm^-1",
+                                "operator_provenance": {
+                                    "intensity_state": "absolute_cm^-1",
+                                    "corrections_applied": serialize_correction_ledger(
+                                        fluo_ledger
+                                    ),
+                                },
+                            }
+                            previous_statistical = err_abs
+                            previous_combined = combined_uncertainty
+                            result = self.subtract_external_absolute_fluorescence(
+                                prof["x"],
+                                i_abs,
+                                previous_statistical,
+                                fluorescence_info,
+                                sample_profile=fluo_sample_profile,
+                            )
+                            i_abs = result.i_subtracted
+                            if combine_sequential_standard_uncertainties is None:
+                                raise RuntimeError(
+                                    "fluorescence uncertainty composition helper is unavailable"
+                                )
+                            err_abs, combined_uncertainty = (
+                                combine_sequential_standard_uncertainties(
+                                    previous_statistical,
+                                    previous_combined,
+                                    result.err_statistical,
+                                    result.err_subtracted,
+                                )
+                            )
+                            fluorescence_info = dict(fluorescence_info)
+                            fluorescence_info["f0"] = result.f0
+                            uncertainty_metadata = self.merge_uncertainty_metadata(
+                                uncertainty_metadata,
+                                self.fluorescence_uncertainty_metadata(
+                                    fluorescence_info, result
+                                ),
+                            )
+
                         output_corrections = list(input_state.corrections_applied)
                         output_corrections.append("k")
                         if corr_mode == "k_over_d":
@@ -6919,6 +7447,8 @@ class SAXSAbsWorkbenchApp:
                             )
                         if buffer_info["enabled"]:
                             output_corrections.append("buffer")
+                        if fluorescence_info["enabled"]:
+                            output_corrections.append("fluorescence")
                         corrections_applied_serialized = serialize_correction_ledger(
                             output_corrections
                         )
@@ -6939,6 +7469,8 @@ class SAXSAbsWorkbenchApp:
                         )
                         if buffer_info["enabled"]:
                             buffer_applied = True
+                        if fluorescence_info["enabled"]:
+                            fluorescence_applied = True
                         status = "成功"
                         outputs = written_path.name
                         ok += 1
@@ -6984,6 +7516,19 @@ class SAXSAbsWorkbenchApp:
                     "BufferIntensityUnit": buffer_audit["intensity_unit"] or "",
                     "BufferCorrectionsApplied": serialize_correction_ledger(
                         buffer_audit["corrections_applied"]
+                    ),
+                    "FluorescenceEnabled": fluorescence_audit["enabled"],
+                    "FluorescenceApplied": fluorescence_applied,
+                    "FluorescenceMethod": fluorescence_audit["method"] or "",
+                    "FluorescenceF0": (
+                        fluorescence_audit["f0"]
+                        if fluorescence_audit["f0"] is not None
+                        else np.nan
+                    ),
+                    "FluorescenceBeta": (
+                        fluorescence_audit["beta"]
+                        if fluorescence_audit["beta"] is not None
+                        else np.nan
                     ),
                     "PipelineMode": pipeline_mode,
                     "CorrMode": corr_mode,
@@ -7038,6 +7583,7 @@ class SAXSAbsWorkbenchApp:
                 "output_dir": str(out_dir),
                 "report_csv": str(report_path),
                 "buffer": buffer_audit,
+                "fluorescence": fluorescence_audit,
                 "summary": {"success": ok, "skipped": skip, "failed": fail},
             }
             meta_path = report_dir / f"external1d_meta_{stamp}.json"
@@ -8624,6 +9170,15 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
                             i_err = np.full_like(i_abs, np.nan)
                         else:
                             i_err = np.asarray(res.sigma, dtype=np.float64) * scale_factor
+                        (
+                            i_abs,
+                            i_err,
+                            combined_uncertainty,
+                            fluo_meta,
+                            extra_corrections,
+                        ) = self.apply_workbench_fluorescence_to_profile(
+                            res.radial, i_abs, i_err, context.get("fluorescence")
+                        )
                         issue = self.profile_health_issue(i_abs)
                         if issue:
                             raise ValueError(issue)
@@ -8635,6 +9190,9 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
                             "Q_A^-1",
                             output_format=output_format,
                             run_policy=run_policy,
+                            extra_corrections=extra_corrections,
+                            combined_uncertainty=combined_uncertainty,
+                            uncertainty_metadata=fluo_meta,
                         )
                         outputs.append(f"{mode}:{written_path.name}")
                         mode_stats[mode]["ok"] += 1
@@ -8707,6 +9265,15 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
                                         i_err = np.full_like(i_abs, np.nan)
                                     else:
                                         i_err = np.asarray(res.sigma, dtype=np.float64) * scale_factor
+                                    (
+                                        i_abs,
+                                        i_err,
+                                        combined_uncertainty,
+                                        fluo_meta,
+                                        extra_corrections,
+                                    ) = self.apply_workbench_fluorescence_to_profile(
+                                        res.radial, i_abs, i_err, context.get("fluorescence")
+                                    )
                                     issue = self.profile_health_issue(i_abs)
                                     if issue:
                                         raise ValueError(issue)
@@ -8718,6 +9285,9 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
                                         "Q_A^-1",
                                         output_format=output_format,
                                         run_policy=run_policy,
+                                        extra_corrections=extra_corrections,
+                                        combined_uncertainty=combined_uncertainty,
+                                        uncertainty_metadata=fluo_meta,
                                     )
                                     written_disp = (
                                         f"{written_path.parent.name}/{written_path.name}"
@@ -8754,6 +9324,15 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
                                         i_err = np.full_like(i_abs, np.nan)
                                     else:
                                         i_err = np.asarray(merge.sigma, dtype=np.float64) * scale_factor
+                                    (
+                                        i_abs,
+                                        i_err,
+                                        combined_uncertainty,
+                                        fluo_meta,
+                                        extra_corrections,
+                                    ) = self.apply_workbench_fluorescence_to_profile(
+                                        merge.radial, i_abs, i_err, context.get("fluorescence")
+                                    )
                                     issue = self.profile_health_issue(i_abs)
                                     if issue:
                                         raise ValueError(issue)
@@ -8765,6 +9344,9 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
                                         "Q_A^-1",
                                         output_format=output_format,
                                         run_policy=run_policy,
+                                        extra_corrections=extra_corrections,
+                                        combined_uncertainty=combined_uncertainty,
+                                        uncertainty_metadata=fluo_meta,
                                     )
                                     outputs.append(f"1d_sector_sum:{written_path.name}")
                                     mode_stats[mode]["ok"] += 1
@@ -9233,6 +9815,13 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
                 "resume": resume,
                 "run_policy": run_policy,
                 "bg_alpha": float(self.t2_alpha.get()) if self.t2_alpha_enabled.get() else 1.0,
+                "fluorescence": self.prepare_workbench_fluorescence(
+                    source="t2",
+                    pipeline_mode="scaled",
+                    calibration_context=active_calibration_context,
+                    k_factor=float(self.global_vars["k_factor"].get()),
+                    require_scaled_pipeline=False,
+                ),
                 "output_format": self.t2_output_format.get() if hasattr(self, "t2_output_format") else "tsv",
                 "export_cal2d": export_cal2d,
                 "cal2d_root": cal2d_root,
@@ -9692,7 +10281,10 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
             "t2_polarization", "t2_output_root", "t2_mask_path", "t2_flat_path",
             "t2_resume_enabled", "t2_overwrite", "t2_workers",
             "t2_strict_instrument", "t2_instr_tol_pct", "t2_alpha",
-            "t2_alpha_enabled", "t2_output_format", "t2_export_cal2d",
+            "t2_alpha_enabled", "t2_fluo_enabled", "t2_fluo_method",
+            "t2_fluo_f0", "t2_fluo_f0_uncertainty", "t2_fluo_beta",
+            "t2_fluo_beta_uncertainty", "t2_fluo_qmin", "t2_fluo_qmax",
+            "t2_fluo_path", "t2_output_format", "t2_export_cal2d",
             "t2_cal2d_dtype", "t2_cal2d_apply_flat", "t2_mode_full",
             "t2_mode_sector", "t2_mode_chi", "t2_sec_min", "t2_sec_max",
             "t2_sector_ranges_text", "t2_sector_save_each",
@@ -9737,14 +10329,23 @@ For advanced details, keep the Chinese help mode or refer to repository docs.
             "t3_sample_exp", "t3_sample_i0", "t3_sample_t", "t3_bg_exp",
             "t3_bg_i0", "t3_bg_t", "t3_sync_bg_from_global",
             "t3_resume_enabled", "t3_overwrite", "t3_buffer_enabled",
-            "t3_buffer_path", "t3_alpha", "t3_alpha_uncertainty", "t3_output_format",
+            "t3_buffer_path", "t3_alpha", "t3_alpha_uncertainty",
+            "t3_fluo_enabled", "t3_fluo_method", "t3_fluo_f0",
+            "t3_fluo_f0_uncertainty", "t3_fluo_beta", "t3_fluo_beta_uncertainty",
+            "t3_fluo_qmin", "t3_fluo_qmax", "t3_fluo_path", "t3_output_format",
         )
         config = {
             name: self._preflight_var_value(getattr(self, name, None))
             for name in names
         }
         files = list(dict.fromkeys(str(item) for item in getattr(self, "t3_files", [])))
-        for name in ("t3_meta_csv_path", "t3_bg1d_path", "t3_dark1d_path", "t3_buffer_path"):
+        for name in (
+            "t3_meta_csv_path",
+            "t3_bg1d_path",
+            "t3_dark1d_path",
+            "t3_buffer_path",
+            "t3_fluo_path",
+        ):
             config[f"{name}_identity"] = self._preflight_file_identity(config[name])
         config.update({
             "schema": "saxsabs-workbench-tab3-preflight-v1",

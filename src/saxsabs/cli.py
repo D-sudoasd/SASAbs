@@ -1,6 +1,6 @@
 """Command-line interface for headless SAXS calibration operations.
 
-Provides seven subcommands: five small utilities plus the safe BL19B2 workflow
+Provides eight subcommands: six small utilities plus the safe BL19B2 workflow
 and its explicit v1 migration entry.
 """
 
@@ -16,6 +16,7 @@ import pandas as pd
 
 from . import __version__
 from .core.buffer_subtraction import subtract_buffer
+from .core.fluorescence_subtraction import subtract_fluorescence
 from .core.calibration import estimate_k_factor_robust
 from .core.intensity_state import require_relative_input_for_absolute_scaling
 from .core.normalization import compute_norm_factor
@@ -384,6 +385,30 @@ def build_parser() -> argparse.ArgumentParser:
     p_sub.add_argument("--alpha", type=float, default=1.0)
     p_sub.add_argument("--alpha-uncertainty", type=float, default=None)
 
+    p_fluo = sub.add_parser(
+        "subtract-fluorescence",
+        help="Subtract additive fluorescence from an absolute sample profile",
+    )
+    p_fluo.add_argument("--sample", required=True, type=Path)
+    p_fluo.add_argument(
+        "--method",
+        required=True,
+        choices=["constant", "high_q_mean", "high_q_median", "measured"],
+        help="How F(q) is obtained",
+    )
+    p_fluo.add_argument("--f0", type=float, default=None, help="Constant F0 in cm^-1")
+    p_fluo.add_argument("--f0-uncertainty", type=float, default=None)
+    p_fluo.add_argument("--beta", type=float, default=1.0)
+    p_fluo.add_argument("--beta-uncertainty", type=float, default=None)
+    p_fluo.add_argument("--qmin", type=float, default=None, help="High-q window minimum")
+    p_fluo.add_argument("--qmax", type=float, default=None, help="High-q window maximum")
+    p_fluo.add_argument(
+        "--fluorescence",
+        type=Path,
+        default=None,
+        help="Measured additive fluorescence profile",
+    )
+
     p_bl = sub.add_parser(
         "bl19b2-abs2d",
         help="Process BL19B2 data with explicit monitor and thickness semantics",
@@ -538,6 +563,58 @@ def main() -> None:
                     "alpha_uncertainty": result.alpha_uncertainty,
                     "high_q_residual_mean": result.high_q_residual_mean,
                     "high_q_check_passed": result.high_q_check_passed,
+                },
+                ensure_ascii=False,
+            )
+        )
+        return
+
+    if args.command == "subtract-fluorescence":
+        try:
+            sample = read_external_1d_profile(args.sample)
+            high_q_window = None
+            if args.qmin is not None or args.qmax is not None:
+                if args.qmin is None or args.qmax is None:
+                    raise ValueError("--qmin and --qmax must be provided together")
+                high_q_window = (args.qmin, args.qmax)
+            q_fluo = i_fluo = err_fluo = None
+            fluo_profile = None
+            if args.fluorescence is not None:
+                fluo_profile = read_external_1d_profile(args.fluorescence)
+                q_fluo = fluo_profile["x"]
+                i_fluo = profile_intensity(fluo_profile)
+                err_fluo = profile_uncertainty(fluo_profile)
+            result = subtract_fluorescence(
+                sample["x"],
+                profile_intensity(sample),
+                profile_uncertainty(sample),
+                sample_profile=sample,
+                method=args.method,
+                f0=args.f0,
+                f0_uncertainty=args.f0_uncertainty,
+                beta=args.beta,
+                beta_uncertainty=args.beta_uncertainty,
+                high_q_window=high_q_window,
+                q_fluorescence=q_fluo,
+                i_fluorescence=i_fluo,
+                err_fluorescence=err_fluo,
+                fluorescence_profile=fluo_profile,
+            )
+        except ValueError as exc:
+            _die(f"subtract-fluorescence failed: {exc}")
+        print(
+            json.dumps(
+                {
+                    "points": int(result.q.size),
+                    "method": result.method,
+                    "beta": result.beta,
+                    "beta_uncertainty": result.beta_uncertainty,
+                    "f0": result.f0,
+                    "f0_uncertainty": result.f0_uncertainty,
+                    "high_q_residual_mean": result.high_q_residual_mean,
+                    "high_q_check_passed": result.high_q_check_passed,
+                    "high_q_points": result.high_q_points,
+                    "negative_fraction": result.negative_fraction,
                 },
                 ensure_ascii=False,
             )

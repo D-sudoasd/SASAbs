@@ -1456,6 +1456,60 @@ def test_formal_buffer_subtraction_has_no_weaker_fallback(monkeypatch):
         )
 
 
+def test_formal_fluorescence_subtraction_has_no_weaker_fallback(monkeypatch):
+    module = _load_workbench_module()
+    app = module.SAXSAbsWorkbenchApp.__new__(module.SAXSAbsWorkbenchApp)
+    monkeypatch.setattr(module, "subtract_fluorescence", None)
+    with pytest.raises(RuntimeError, match="formal fluorescence subtraction kernel"):
+        app.subtract_external_absolute_fluorescence(
+            np.array([0.01, 0.02, 0.03]),
+            np.array([10.0, 9.0, 8.0]),
+            np.array([0.2, 0.2, 0.2]),
+            {"method": "constant", "f0": 1.0, "beta": 1.0},
+        )
+
+
+def test_workbench_merge_keeps_unknown_when_either_step_is_unknown():
+    module = _load_workbench_module()
+    merged = module.SAXSAbsWorkbenchApp.merge_uncertainty_metadata(
+        {
+            "uncertainty_model": "buffer-model",
+            "uncertainty_type": "combined_standard_unknown_alpha",
+        },
+        {
+            "uncertainty_model": "fluo-model",
+            "uncertainty_type": "combined_standard",
+            "fluorescence_method": "constant",
+        },
+    )
+    assert merged["uncertainty_type"] == "combined_standard_unknown"
+    assert "buffer-model" in merged["uncertainty_model"]
+    assert "fluo-model" in merged["uncertainty_model"]
+
+
+def test_workbench_constant_fluorescence_kernel_and_disabled_default():
+    module = _load_workbench_module()
+    app = module.SAXSAbsWorkbenchApp.__new__(module.SAXSAbsWorkbenchApp)
+    app.t3_fluo_enabled = _Var(False)
+    payload = app.prepare_workbench_fluorescence(source="t3", pipeline_mode="scaled")
+    assert payload["enabled"] is False
+
+    result = app.subtract_external_absolute_fluorescence(
+        np.array([0.01, 0.02, 0.03]),
+        np.array([10.0, 9.0, 8.0]),
+        np.array([0.2, 0.2, 0.2]),
+        {
+            "method": "constant",
+            "f0": 2.0,
+            "f0_uncertainty": 0.0,
+            "beta": 1.0,
+            "beta_uncertainty": 0.0,
+            "profile": None,
+        },
+    )
+    np.testing.assert_allclose(result.i_subtracted, [8.0, 7.0, 6.0])
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
@@ -1848,6 +1902,43 @@ def test_buffer_combined_uncertainty_and_provenance_roundtrip_all_formats(
     assert provenance["buffer_alpha_uncertainty"] == "0.05"
     assert provenance["uncertainty_model"] == "test-model"
     assert provenance["uncertainty_type"] == "combined_standard"
+
+
+@pytest.mark.parametrize("output_format", ["tsv", "csv", "cansas_xml", "nxcansas_h5"])
+def test_fluorescence_provenance_roundtrip_all_formats(tmp_path, output_format):
+    if output_format == "nxcansas_h5":
+        pytest.importorskip("h5py")
+    module = _load_workbench_module()
+    app, _files = _make_complete_custom_record(module, tmp_path)
+    context = app.require_trusted_k_for_external(2.5)
+
+    written = app.save_profile_table(
+        tmp_path / "fluo.dat",
+        np.array([0.01, 0.02, 0.03]),
+        np.array([10.0, 9.0, 8.0]),
+        np.array([0.1, 0.2, 0.3]),
+        "Q_A^-1",
+        output_format=output_format,
+        calibration_context=context,
+        corrections_applied=["fluorescence", "k", "thickness"],
+        extra_corrections=(),
+        combined_uncertainty=np.array([0.15, 0.25, 0.35]),
+        uncertainty_metadata={
+            "fluorescence_method": "constant",
+            "fluorescence_f0": "2.0",
+            "fluorescence_f0_uncertainty": "0.0",
+            "fluorescence_beta": "1.0",
+            "fluorescence_beta_uncertainty": "0.0",
+            "uncertainty_model": "u_combined^2=u_sample^2+beta^2*u_F^2+F^2*u_beta^2",
+            "uncertainty_type": "combined_standard",
+        },
+    )
+
+    profile = app.read_external_1d_profile(written)
+    provenance = profile["operator_provenance"]
+    assert provenance["fluorescence_method"] == "constant"
+    assert provenance["fluorescence_f0"] == "2.0"
+    assert "fluorescence" in provenance["corrections_applied"]
 
 
 @pytest.mark.parametrize("output_format", ["tsv", "csv", "cansas_xml", "nxcansas_h5"])

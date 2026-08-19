@@ -38,10 +38,18 @@ from .intensity_state import (
     assess_intensity_state,
     parse_correction_ledger,
     require_absolute_input_for_buffer_subtraction,
+    require_absolute_input_for_fluorescence_subtraction,
     require_relative_input_for_absolute_scaling,
     serialize_correction_ledger,
 )
 from .buffer_subtraction import BufferSubtractionResult, subtract_buffer
+from .fluorescence_subtraction import (
+    FluorescenceMethod,
+    FluorescenceSubtractionResult,
+    parse_fluorescence_method,
+    subtract_fluorescence,
+    combine_sequential_standard_uncertainties,
+)
 from .execution_policy import RunPolicy, parse_run_policy, should_skip_all_existing
 from .preflight import PreflightGateSummary, evaluate_preflight_gate
 from .reference_matching import (
@@ -108,10 +116,16 @@ __all__ = [
     "assess_intensity_state",
     "parse_correction_ledger",
     "require_absolute_input_for_buffer_subtraction",
+    "require_absolute_input_for_fluorescence_subtraction",
     "require_relative_input_for_absolute_scaling",
     "serialize_correction_ledger",
     "BufferSubtractionResult",
     "subtract_buffer",
+    "FluorescenceMethod",
+    "FluorescenceSubtractionResult",
+    "parse_fluorescence_method",
+    "subtract_fluorescence",
+    "combine_sequential_standard_uncertainties",
     "RunPolicy",
     "parse_run_policy",
     "should_skip_all_existing",

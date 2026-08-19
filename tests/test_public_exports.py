@@ -38,5 +38,6 @@ def test_top_level_reexports_scientific_safety_contracts():
     assert callable(saxsabs.derive_fixed_thickness)
     assert callable(saxsabs.assess_intensity_state)
     assert callable(saxsabs.require_relative_input_for_absolute_scaling)
+    assert callable(saxsabs.require_absolute_input_for_fluorescence_subtraction)
     assert isinstance(saxsabs.XRAYDB_VERSION, str)
     assert saxsabs.XRAYDB_VERSION

@@ -142,6 +142,58 @@ def test_integration_applies_only_deferred_mask_and_solid_angle_and_resumes(
     assert len(calls) == 1
 
 
+def test_integration_optional_constant_fluorescence_changes_1d_and_signature(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    package, _manifest = _build_package(tmp_path)
+
+    class FakeIntegrator:
+        def integrate1d(self, _image, npt, **_kwargs):
+            return SimpleNamespace(
+                radial=np.linspace(0.001, 1.0, npt),
+                intensity=np.full(npt, 4.0),
+            )
+
+    monkeypatch.setattr(integration, "_load_integrator", lambda _path: FakeIntegrator())
+    monkeypatch.setattr(
+        integration,
+        "_load_validate_edf",
+        lambda _item, _metadata, _mask: np.arange(4, dtype=np.float32).reshape(2, 2),
+    )
+    monkeypatch.setattr(integration, "_version", lambda _name: "test-pyfai")
+
+    result = integration.run_bl19b2_integrate1d(
+        integration.Integrate1DConfig(
+            package,
+            fluorescence_method="constant",
+            fluorescence_f0=1.5,
+            fluorescence_f0_uncertainty=0.0,
+            fluorescence_beta_uncertainty=0.0,
+        )
+    )
+    assert result["processed"] == 1
+    profile = package / "integration" / "profiles" / "problem" / "sample_00001_abs1d_cm-1.csv"
+    rows = [line.split(",") for line in profile.read_text(encoding="utf-8").splitlines()[1:]]
+    intensities = [float(row[1]) for row in rows]
+    assert intensities[0] == pytest.approx(2.5)
+    sidecar = json.loads(
+        (
+            package
+            / "integration"
+            / "metadata"
+            / "problem"
+            / "sample_00001_abs1d.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert sidecar["fluorescence"]["method"] == "constant"
+    assert sidecar["fluorescence"]["f0"] == pytest.approx(1.5)
+    signature = json.loads(
+        (package / "integration" / "config" / "run_signature.json").read_text(encoding="utf-8")
+    )
+    assert signature["payload"]["fluorescence_method"] == "constant"
+    assert signature["payload"]["fluorescence_f0"] == pytest.approx(1.5)
+
+
 def test_resume_uses_canonical_selection_and_scientific_metadata_hash(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ):

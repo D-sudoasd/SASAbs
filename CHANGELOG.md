@@ -2,6 +2,16 @@
 
 ## [2.0.0] - Unreleased
 
+### Fluorescence subtraction (1D)
+
+- Add an opt-in absolute-scale fluorescence kernel
+  (`I_corr = I_abs − β F(q)`) with `constant`, `high_q_mean`,
+  `high_q_median`, and `measured_profile` methods, a `fluorescence`
+  correction-ledger token, CLI `subtract-fluorescence`, Workbench Tab 3/Tab 2
+  1-D hooks, and optional BL19B2 integrate1d post-processing. Default remains
+  off. Unknown `u(F0)`/`u(β)` keeps combined uncertainty NaN. Detector-space
+  NIST blank subtraction is unchanged.
+
 ### Resource-handle pass (2026-08-17)
 
 - Added `saxsabs.io.detector_images` as the common copy-and-close detector

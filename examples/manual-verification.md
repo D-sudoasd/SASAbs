@@ -165,7 +165,16 @@ front end to the strict BL19B2 campaign runner.
    Negative, non-finite, or malformed values must fail closed. Temporarily make
    the shared core kernel unavailable and confirm formal subtraction fails closed
    rather than using a weaker fallback.
-9. Before packaging the repository, confirm `git status` contains no audit
+9. Enable fluorescence subtraction on an absolute Tab 3 (or Tab 2 1-D) result.
+   Confirm it is refused on relative/raw profiles, refused if `fluorescence` is
+   already in `corrections_applied`, and applied only after K/thickness and
+   optional buffer. For `constant`, set a planted F0 and confirm
+   `I_corr = I_abs − F0`. Leave `u(F0)` blank and confirm combined uncertainty
+   is NaN; set a finite value and confirm it enters the combined column. For
+   `high_q_mean`, a window with fewer than 3 finite points must fail closed.
+   Confirm `saxsabs subtract-fluorescence --help` lists the same methods, and
+   that making the shared kernel unavailable fails closed with no GUI fallback.
+10. Before packaging the repository, confirm `git status` contains no audit
    outputs, build caches, downloaded literature, or private drive roots. Keep
    manual evidence outside the repository and use only anonymized, portable
    fixtures for version-controlled examples and tests.

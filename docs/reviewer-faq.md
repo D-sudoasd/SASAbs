@@ -7,6 +7,14 @@ entry point. Reusable scientific and I/O logic lives under `src/saxsabs/`; the
 GUI remains separate because the current Workbench and strict BL19B2 campaign
 runner have intentionally different ownership boundaries.
 
+## Is fluorescence the same as empty-cell or buffer subtraction?
+
+No. Empty-cell / NIST-blank subtraction happens in detector space before
+absolute scaling. Buffer subtraction removes solvent on the absolute
+cm$^{-1}$ scale. Fluorescence subtraction is an optional additive 1-D term
+applied after K, thickness, and optional buffer. It is off by default, does
+not change $K$, and is not written onto 2D raw counts.
+
 ## How can this be tested without GUI?
 
 Core logic is exposed as importable APIs and CLI commands. Tests run headlessly in CI.
