@@ -43,6 +43,13 @@ class Integrate1DConfig:
     correct_solid_angle: bool = True
     polarization_factor: float | None = None
     resume: bool = True
+    fluorescence_method: str | None = None
+    fluorescence_f0: float | None = None
+    fluorescence_f0_uncertainty: float | None = None
+    fluorescence_beta: float = 1.0
+    fluorescence_beta_uncertainty: float | None = None
+    fluorescence_qmin: float | None = None
+    fluorescence_qmax: float | None = None
 
     def output_root(self) -> Path:
         return Path(self.package_root) / "integration"
@@ -244,6 +251,65 @@ def _write_new_or_verify(path: Path, data: bytes) -> None:
         raise FileExistsError(f"stale temporary integration artifact: {temporary}")
     temporary.write_bytes(data)
     temporary.replace(path)
+
+
+def _absolute_1d_sample_profile() -> dict[str, object]:
+    return {
+        "intensity_state": "absolute_cm^-1",
+        "intensity_unit": "1/cm",
+        "operator_provenance": {
+            "intensity_state": "absolute_cm^-1",
+            "corrections_applied": '["k","thickness"]',
+        },
+    }
+
+
+def _fluorescence_config_payload(config: Integrate1DConfig) -> dict[str, Any]:
+    return {
+        "fluorescence_method": config.fluorescence_method,
+        "fluorescence_f0": config.fluorescence_f0,
+        "fluorescence_f0_uncertainty": config.fluorescence_f0_uncertainty,
+        "fluorescence_beta": config.fluorescence_beta,
+        "fluorescence_beta_uncertainty": config.fluorescence_beta_uncertainty,
+        "fluorescence_qmin": config.fluorescence_qmin,
+        "fluorescence_qmax": config.fluorescence_qmax,
+    }
+
+
+def _apply_optional_fluorescence(
+    q: np.ndarray,
+    intensity: np.ndarray,
+    config: Integrate1DConfig,
+) -> tuple[np.ndarray, dict[str, Any] | None]:
+    if not config.fluorescence_method:
+        return intensity, None
+    from saxsabs.core.fluorescence_subtraction import subtract_fluorescence
+
+    window = None
+    if config.fluorescence_qmin is not None or config.fluorescence_qmax is not None:
+        if config.fluorescence_qmin is None or config.fluorescence_qmax is None:
+            raise ValueError("fluorescence_qmin and fluorescence_qmax must be provided together")
+        window = (float(config.fluorescence_qmin), float(config.fluorescence_qmax))
+    result = subtract_fluorescence(
+        q,
+        intensity,
+        None,
+        sample_profile=_absolute_1d_sample_profile(),
+        method=config.fluorescence_method,
+        f0=config.fluorescence_f0,
+        f0_uncertainty=config.fluorescence_f0_uncertainty,
+        beta=config.fluorescence_beta,
+        beta_uncertainty=config.fluorescence_beta_uncertainty,
+        high_q_window=window,
+    )
+    return result.i_subtracted, {
+        "method": result.method,
+        "f0": result.f0,
+        "beta": result.beta,
+        "negative_fraction": result.negative_fraction,
+        "high_q_residual_mean": result.high_q_residual_mean,
+        "high_q_check_passed": result.high_q_check_passed,
+    }
 
 
 def _profile_bytes(q: np.ndarray, intensity: np.ndarray) -> bytes:
@@ -462,6 +528,7 @@ def run_bl19b2_integrate1d(config: Integrate1DConfig) -> dict[str, Any]:
         "normalization_factor": 1.0,
         "do_not_repeat": sorted(DO_NOT_REPEAT),
         "pyFAI_version": _version("pyFAI"),
+        **_fluorescence_config_payload(config),
     }
     run_signature = _canonical_hash(signature_payload)
     out = config.output_root()
@@ -504,7 +571,8 @@ def run_bl19b2_integrate1d(config: Integrate1DConfig) -> dict[str, Any]:
         "# BL19B2 absolute 1D integration\n\n"
         "The EDF inputs were already corrected for dark, background, monitor, transmission, "
         "thickness, and K. This step applies only the package mask and one solid-angle correction "
-        "during pyFAI CSR integration. No polarization correction is applied.\n"
+        "during pyFAI CSR integration. No polarization correction is applied. "
+        "Optional fluorescence subtraction, if configured, is applied to the absolute 1D curve.\n"
     ).encode("utf-8")
     _write_new_or_verify(out / "README.md", readme)
 
@@ -541,6 +609,7 @@ def run_bl19b2_integrate1d(config: Integrate1DConfig) -> dict[str, Any]:
         else:
             image = _load_validate_edf(item, metadata, mask)
             q, intensity = _integrate(ai, image, mask, config)
+            intensity, fluorescence_diag = _apply_optional_fluorescence(q, intensity, config)
             profile_data = _profile_bytes(q, intensity)
             _write_new_or_verify(profile, profile_data)
             side_doc = {
@@ -561,8 +630,12 @@ def run_bl19b2_integrate1d(config: Integrate1DConfig) -> dict[str, Any]:
                     "dark": None,
                     "flat": None,
                     "normalization_factor": 1.0,
-                    "do_not_repeat": sorted(DO_NOT_REPEAT),
+                    "do_not_repeat": sorted(
+                        set(DO_NOT_REPEAT)
+                        | ({"fluorescence"} if fluorescence_diag else set())
+                    ),
                 },
+                "fluorescence": fluorescence_diag,
             }
             _write_new_or_verify(sidecar, _json_bytes(side_doc))
             processed += 1

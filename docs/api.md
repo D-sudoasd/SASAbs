@@ -93,6 +93,11 @@ subtract_buffer(q_sample, i_sample, err_sample, q_buffer, i_buffer, err_buffer,
                 *, alpha_uncertainty: float | None = None,
                 sample_profile: Mapping[str, object],
                 buffer_profile: Mapping[str, object]) -> BufferSubtractionResult
+subtract_fluorescence(q, i_abs, err_abs, *, sample_profile, method,
+                f0=None, f0_uncertainty=None, beta=1.0, beta_uncertainty=None,
+                high_q_window=None, q_fluorescence=None, i_fluorescence=None,
+                err_fluorescence=None, fluorescence_profile=None,
+                residual_window=None) -> FluorescenceSubtractionResult
 propagate_absolute_uncertainty(intensity: np.ndarray, *,
     statistical_standard_uncertainty=None, k_relative_standard_uncertainty=None,
     standard_relative_standard_uncertainty=None,
@@ -108,6 +113,12 @@ conflicting evidence remains ambiguous. A unitless metadata label `absolute` is
 ambiguous and is not treated as cm$^{-1}$. `subtract_buffer` requires
 `sample_profile` and `buffer_profile` provenance, interpolates a buffer onto
 the sample q grid when necessary, and propagates supplied uncertainties.
+`subtract_fluorescence` is an opt-in additive correction on absolute cm$^{-1}$
+data after K, thickness, and optional buffer. Methods are `constant`,
+`high_q_mean`, `high_q_median`, and `measured_profile`. A high-q constant is
+valid only where elastic SAXS is negligible in that window. Missing `u(F0)` or
+`u(β)` keeps combined uncertainty NaN. Negative intensities are reported, not
+clipped. This is not detector-dark, NIST-blank, or solvent subtraction.
 `propagate_absolute_uncertainty` combines statistical and supplied standard
 uncertainty components; relative inputs must be relative standard uncertainties.
 
@@ -162,6 +173,10 @@ saxsabs estimate-k --meas <path> [--ref <path>] [--q-col <name>] [--i-col <name>
                     [--intensity-state relative] [--thickness-cm <cm>]
 saxsabs subtract-buffer --sample <path> --buffer <path> [--alpha <value>]
                     [--alpha-uncertainty <value>]
+saxsabs subtract-fluorescence --sample <path> --method <constant|high_q_mean|high_q_median|measured>
+                    [--f0 <cm^-1>] [--f0-uncertainty <value>] [--beta <value>]
+                    [--beta-uncertainty <value>] [--qmin <Å^-1>] [--qmax <Å^-1>]
+                    [--fluorescence <path>]
 saxsabs bl19b2-abs2d --input-root <path> (--poni <path>|--pydidas-cali-yaml <path>)
                          (--mu <cm^-1>|--sample-thickness-cm <cm>)
                          --monitor-mode <rate|integrated> [workflow options]
@@ -178,6 +193,7 @@ The main commands are:
 | `parse-external1d` | profile path | parsed-profile summary JSON |
 | `estimate-k` | relative measured profile; optional reference (built-in SRM 3600 if omitted); optional `--thickness-cm` | K-factor result JSON |
 | `subtract-buffer` | absolute sample and buffer profiles with cm⁻¹ units | subtraction diagnostic JSON |
+| `subtract-fluorescence` | absolute sample profile; constant, high-q window, or measured F(q) | fluorescence diagnostic JSON |
 | `bl19b2-abs2d` | explicit BL19B2 inputs and semantics | batch result JSON and requested files |
 | `bl19b2-abs2d-v1-legacy` | explicit migration choices | legacy-compatible batch result with documented assumptions |
 

@@ -24,9 +24,16 @@ from .core.intensity_state import (
     IntensityStateAssessment,
     assess_intensity_state,
     require_absolute_input_for_buffer_subtraction,
+    require_absolute_input_for_fluorescence_subtraction,
     require_relative_input_for_absolute_scaling,
 )
 from .core.buffer_subtraction import BufferSubtractionResult, subtract_buffer
+from .core.fluorescence_subtraction import (
+    FluorescenceMethod,
+    FluorescenceSubtractionResult,
+    parse_fluorescence_method,
+    subtract_fluorescence,
+)
 from .core.preflight import evaluate_preflight_gate, PreflightGateSummary
 from .core.execution_policy import (
     RunPolicy,
@@ -113,10 +120,15 @@ __all__ = [
     "IntensityStateAssessment",
     "assess_intensity_state",
     "require_absolute_input_for_buffer_subtraction",
+    "require_absolute_input_for_fluorescence_subtraction",
     "require_relative_input_for_absolute_scaling",
     # buffer subtraction
     "BufferSubtractionResult",
     "subtract_buffer",
+    "FluorescenceMethod",
+    "FluorescenceSubtractionResult",
+    "parse_fluorescence_method",
+    "subtract_fluorescence",
     # I/O
     "parse_header_values",
     "parse_header_values_with_meta",

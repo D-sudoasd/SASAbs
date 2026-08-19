@@ -1456,6 +1456,60 @@ def test_formal_buffer_subtraction_has_no_weaker_fallback(monkeypatch):
         )
 
 
+def test_formal_fluorescence_subtraction_has_no_weaker_fallback(monkeypatch):
+    module = _load_workbench_module()
+    app = module.SAXSAbsWorkbenchApp.__new__(module.SAXSAbsWorkbenchApp)
+    monkeypatch.setattr(module, "subtract_fluorescence", None)
+    with pytest.raises(RuntimeError, match="formal fluorescence subtraction kernel"):
+        app.subtract_external_absolute_fluorescence(
+            np.array([0.01, 0.02, 0.03]),
+            np.array([10.0, 9.0, 8.0]),
+            np.array([0.2, 0.2, 0.2]),
+            {"method": "constant", "f0": 1.0, "beta": 1.0},
+        )
+
+
+def test_workbench_merge_keeps_unknown_when_either_step_is_unknown():
+    module = _load_workbench_module()
+    merged = module.SAXSAbsWorkbenchApp.merge_uncertainty_metadata(
+        {
+            "uncertainty_model": "buffer-model",
+            "uncertainty_type": "combined_standard_unknown_alpha",
+        },
+        {
+            "uncertainty_model": "fluo-model",
+            "uncertainty_type": "combined_standard",
+            "fluorescence_method": "constant",
+        },
+    )
+    assert merged["uncertainty_type"] == "combined_standard_unknown"
+    assert "buffer-model" in merged["uncertainty_model"]
+    assert "fluo-model" in merged["uncertainty_model"]
+
+
+def test_workbench_constant_fluorescence_kernel_and_disabled_default():
+    module = _load_workbench_module()
+    app = module.SAXSAbsWorkbenchApp.__new__(module.SAXSAbsWorkbenchApp)
+    app.t3_fluo_enabled = _Var(False)
+    payload = app.prepare_workbench_fluorescence(source="t3", pipeline_mode="scaled")
+    assert payload["enabled"] is False
+
+    result = app.subtract_external_absolute_fluorescence(
+        np.array([0.01, 0.02, 0.03]),
+        np.array([10.0, 9.0, 8.0]),
+        np.array([0.2, 0.2, 0.2]),
+        {
+            "method": "constant",
+            "f0": 2.0,
+            "f0_uncertainty": 0.0,
+            "beta": 1.0,
+            "beta_uncertainty": 0.0,
+            "profile": None,
+        },
+    )
+    np.testing.assert_allclose(result.i_subtracted, [8.0, 7.0, 6.0])
+
+
 @pytest.mark.parametrize(
     ("raw", "expected"),
     [
@@ -1661,6 +1715,117 @@ def test_tab3_run_preloads_buffer_once_and_reports_provenance(tmp_path):
         "corrections_applied": ["k", "thickness"],
     }
 
+
+def test_tab3_high_q_fluorescence_does_not_reuse_first_file_f0(tmp_path):
+    """Prepared high_q payload keeps f0=None for every queue file.
+
+    Mutating the shared fluorescence_info['f0'] after file 1 makes file 2+
+    hit the kernel's 'refuse a user f0' guard.
+    """
+    module = _load_workbench_module()
+    app = module.SAXSAbsWorkbenchApp.__new__(module.SAXSAbsWorkbenchApp)
+    app.language = "en"
+    poni = tmp_path / "geometry.poni"
+    poni.write_text("poni", encoding="utf-8")
+    context = _calibration_context(module, poni)
+    fingerprint = context.fingerprint()
+
+    def write_relative(path, values):
+        ledger = '["thickness"]'
+        path.write_text(
+            f"# calibration_context_fingerprint: {fingerprint}\n"
+            "# thickness_cm: 0.1\n"
+            "# thickness_source: upstream sample cell record\n"
+            "# intensity_state: relative\n"
+            "# intensity_unit: relative\n"
+            f"# corrections_applied: {ledger}\n"
+            f"# do_not_repeat: {ledger}\n"
+            "# q_A^-1 I_rel Error\n"
+            + "\n".join(
+                f"{q:.3f} {intensity:.3f} 0.1"
+                for q, intensity in zip((0.01, 0.02, 0.03), values)
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+    sample_a = tmp_path / "fluo_a.dat"
+    sample_b = tmp_path / "fluo_b.dat"
+    write_relative(sample_a, (10.0, 9.0, 8.0))
+    write_relative(sample_b, (12.0, 11.0, 10.0))
+
+    app.t3_files = [str(sample_a), str(sample_b)]
+    app.global_vars = {"k_factor": _Var(2.5)}
+    app.t3_pipeline_mode = _Var("scaled")
+    app.t3_corr_mode = _Var("k_only")
+    app.t3_fixed_thk = _Var(1.0)
+    app.t3_buffer_enabled = _Var(False)
+    app.t3_buffer_path = _Var("")
+    app.t3_alpha = _Var(1.0)
+    app.t3_alpha_uncertainty = _Var("")
+    app.t3_buffer_status = _Var("")
+    app.t3_fluo_enabled = _Var(True)
+    app.t3_fluo_method = _Var("high_q_mean")
+    app.t3_fluo_f0 = _Var("")
+    app.t3_fluo_f0_uncertainty = _Var("0")
+    app.t3_fluo_beta = _Var(1.0)
+    app.t3_fluo_beta_uncertainty = _Var("0")
+    app.t3_fluo_qmin = _Var("0.01")
+    app.t3_fluo_qmax = _Var("0.03")
+    app.t3_fluo_path = _Var("")
+    app.t3_fluo_status = _Var("")
+    app.t3_output_root = _Var(str(tmp_path / "output"))
+    app.t3_resume_enabled = _Var(False)
+    app.t3_overwrite = _Var(False)
+    app.t3_output_format = _Var("tsv")
+    app.t3_x_mode = _Var("auto")
+    app.t3_wavelength_a = _Var("")
+    app.t3_meta_csv_path = _Var("")
+    app.t3_bg1d_path = _Var("")
+    app.t3_dark1d_path = _Var("")
+    app.t3_prog_bar = {}
+    app.root = SimpleNamespace(update_idletasks=lambda: None)
+    app.get_monitor_mode = lambda: "rate"
+    app.require_trusted_k_for_external = lambda *_args, **_kwargs: context
+    app.log = lambda _message: None
+    app.show_info = lambda *_args, **_kwargs: None
+    app.show_error = lambda _title, message: pytest.fail(message)
+
+    app.t3_preflight_approval = module.approve_preflight(
+        app._t3_preflight_config(), "READY"
+    )
+    prepared = app.prepare_workbench_fluorescence(
+        source="t3",
+        pipeline_mode="scaled",
+        calibration_context=context,
+        k_factor=2.5,
+    )
+    assert prepared["enabled"] is True
+    assert prepared["f0"] is None
+    assert prepared["method"] == "high_q_mean"
+
+    app.run_external_1d_batch()
+
+    report_dir = tmp_path / "output" / "processed_external_1d_reports"
+    report_path = next(report_dir.glob("external1d_report_*.csv"))
+    report = __import__("pandas").read_csv(report_path)
+    assert report["Status"].tolist() == ["成功", "成功"]
+    assert report["FluorescenceApplied"].tolist() == [True, True]
+    assert report["FluorescenceF0"].tolist() == pytest.approx([22.5, 27.5])
+    assert prepared["f0"] is None
+
+    out_a = app.read_external_1d_profile(
+        tmp_path / "output" / "processed_external_1d_abs" / "fluo_a.dat"
+    )
+    out_b = app.read_external_1d_profile(
+        tmp_path / "output" / "processed_external_1d_abs" / "fluo_b.dat"
+    )
+    np.testing.assert_allclose(out_a["i_abs"], [2.5, 0.0, -2.5])
+    np.testing.assert_allclose(out_b["i_abs"], [2.5, 0.0, -2.5])
+    assert "fluorescence" in out_a["operator_provenance"]["corrections_applied"]
+    assert "fluorescence" in out_b["operator_provenance"]["corrections_applied"]
+
+
 def _make_complete_custom_record(module, tmp_path):
     files = {}
     for name in ("poni", "standard", "background", "dark", "reference"):
@@ -1848,6 +2013,43 @@ def test_buffer_combined_uncertainty_and_provenance_roundtrip_all_formats(
     assert provenance["buffer_alpha_uncertainty"] == "0.05"
     assert provenance["uncertainty_model"] == "test-model"
     assert provenance["uncertainty_type"] == "combined_standard"
+
+
+@pytest.mark.parametrize("output_format", ["tsv", "csv", "cansas_xml", "nxcansas_h5"])
+def test_fluorescence_provenance_roundtrip_all_formats(tmp_path, output_format):
+    if output_format == "nxcansas_h5":
+        pytest.importorskip("h5py")
+    module = _load_workbench_module()
+    app, _files = _make_complete_custom_record(module, tmp_path)
+    context = app.require_trusted_k_for_external(2.5)
+
+    written = app.save_profile_table(
+        tmp_path / "fluo.dat",
+        np.array([0.01, 0.02, 0.03]),
+        np.array([10.0, 9.0, 8.0]),
+        np.array([0.1, 0.2, 0.3]),
+        "Q_A^-1",
+        output_format=output_format,
+        calibration_context=context,
+        corrections_applied=["fluorescence", "k", "thickness"],
+        extra_corrections=(),
+        combined_uncertainty=np.array([0.15, 0.25, 0.35]),
+        uncertainty_metadata={
+            "fluorescence_method": "constant",
+            "fluorescence_f0": "2.0",
+            "fluorescence_f0_uncertainty": "0.0",
+            "fluorescence_beta": "1.0",
+            "fluorescence_beta_uncertainty": "0.0",
+            "uncertainty_model": "u_combined^2=u_sample^2+beta^2*u_F^2+F^2*u_beta^2",
+            "uncertainty_type": "combined_standard",
+        },
+    )
+
+    profile = app.read_external_1d_profile(written)
+    provenance = profile["operator_provenance"]
+    assert provenance["fluorescence_method"] == "constant"
+    assert provenance["fluorescence_f0"] == "2.0"
+    assert "fluorescence" in provenance["corrections_applied"]
 
 
 @pytest.mark.parametrize("output_format", ["tsv", "csv", "cansas_xml", "nxcansas_h5"])

@@ -83,7 +83,7 @@ a display server.
 
 | Route | Best for | Start here |
 | --- | --- | --- |
-| **CLI utilities** | normalization, header and 1D parsing, gated K estimation, gated buffer subtraction | `saxsabs --help` |
+| **CLI utilities** | normalization, header and 1D parsing, gated K estimation, gated buffer and fluorescence subtraction | `saxsabs --help` |
 | **SAXSAbs Workbench** | interactive K calibration, batch processing, external-1D scaling | `saxsabs-workbench --lang en` |
 | **Strict BL19B2 runner** | validated campaign inputs under current BL19B2 conventions | [batch runbook](docs/bl19b2_abs2d_batch_runbook.md) |
 | **Python API** | reusable scientific calculations and file I/O | [API reference](docs/api.md) |

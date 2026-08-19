@@ -396,6 +396,68 @@ def test_cli_subtract_buffer_refuses_unlabeled_profiles(
     assert "absolute" in capsys.readouterr().err.lower()
 
 
+def test_cli_subtract_fluorescence(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    sample = tmp_path / "sample.csv"
+    _write_absolute_profile(sample, "0.01,12.0\n0.02,11.0\n0.20,6.0\n")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "saxsabs",
+            "subtract-fluorescence",
+            "--sample",
+            str(sample),
+            "--method",
+            "constant",
+            "--f0",
+            "2.0",
+            "--f0-uncertainty",
+            "0.0",
+            "--beta-uncertainty",
+            "0.0",
+        ],
+    )
+    main()
+    out = json.loads(capsys.readouterr().out)
+    assert out["points"] == 3
+    assert out["method"] == "constant"
+    assert out["f0"] == pytest.approx(2.0)
+    assert out["negative_fraction"] == pytest.approx(0.0)
+
+
+def test_cli_subtract_fluorescence_refuses_unlabeled_profiles(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    sample = tmp_path / "sample.csv"
+    sample.write_text("q,i\n0.01,12.0\n0.02,11.0\n0.20,6.0\n", encoding="utf-8")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "saxsabs",
+            "subtract-fluorescence",
+            "--sample",
+            str(sample),
+            "--method",
+            "constant",
+            "--f0",
+            "2.0",
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        main()
+
+    assert exc_info.value.code == 1
+    assert "absolute" in capsys.readouterr().err.lower()
+
+
 def test_cli_version(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch):
     from saxsabs import __version__
 

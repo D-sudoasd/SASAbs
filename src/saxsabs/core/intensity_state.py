@@ -46,6 +46,7 @@ KNOWN_CORRECTIONS = frozenset(
         "polarization",
         "flat_field",
         "buffer",
+        "fluorescence",
     }
 )
 
@@ -95,6 +96,10 @@ def _canonical_correction(value: object) -> str:
         "flat": "flat_field",
         "flatfield": "flat_field",
         "buffer": "buffer",
+        "fluorescence": "fluorescence",
+        "fluo": "fluorescence",
+        "xrf": "fluorescence",
+        "fluorescencebackground": "fluorescence",
     }
     canonical = aliases.get(token)
     if canonical is None:
@@ -328,4 +333,36 @@ def require_absolute_input_for_buffer_subtraction(
         )
     if "buffer" in corrections:
         raise ValueError(f"{profile_name}: buffer profile is already buffer-subtracted")
+    return assessment
+
+
+def require_absolute_input_for_fluorescence_subtraction(
+    profile: Mapping[str, object],
+    *,
+    profile_name: str = "sample",
+) -> IntensityStateAssessment:
+    """Require a traceable absolute profile before subtracting fluorescence."""
+
+    assessment = assess_intensity_state(profile)
+    if assessment.state is not IntensityState.ABSOLUTE_CM_INV:
+        raise ValueError(
+            f"{profile_name}: fluorescence subtraction requires explicit "
+            "absolute intensity in cm^-1"
+        )
+    provenance = profile.get("operator_provenance")
+    provenance = provenance if isinstance(provenance, Mapping) else {}
+    raw_unit = profile.get("intensity_unit", provenance.get("intensity_unit", ""))
+    if not is_cm_inv_intensity_unit(raw_unit):
+        raise ValueError(f"{profile_name}: intensity_unit must be 1/cm")
+    corrections = set(assessment.corrections_applied)
+    missing = set(ABSOLUTE_CORRECTIONS) - corrections
+    if missing:
+        raise ValueError(
+            f"{profile_name}: absolute ledger is missing: "
+            + ", ".join(sorted(missing))
+        )
+    if "fluorescence" in assessment.protected_corrections:
+        raise ValueError(
+            f"{profile_name}: profile is already fluorescence-subtracted"
+        )
     return assessment

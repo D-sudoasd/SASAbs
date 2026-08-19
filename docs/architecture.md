@@ -17,6 +17,7 @@
 │  saxsabs.core.intensity_state (1D ledger)       │
 │  saxsabs.core.workbench_preflight_gate          │
 │  saxsabs.core.buffer_subtraction (BioSAXS)      │
+│  saxsabs.core.fluorescence_subtraction (1D)     │
 │  saxsabs.workflows.bl19b2_abs2d / integrate1d   │
 │  saxsabs.io.parsers          (header + 1D I/O)  │
 │  saxsabs.io.writers          (canSAS/NXcanSAS)  │
@@ -31,17 +32,19 @@
 - **`src/saxsabs/core`**: pure computation logic (normalization, robust
 	K-factor estimation, fingerprinted NIST 30 keV material attenuation,
 	xraydb/Elam diagnostic attenuation, 1D intensity/correction state, Workbench
-	preflight fingerprints, and buffer subtraction). No GUI side-effects —
+	preflight fingerprints, buffer subtraction, and optional 1D fluorescence
+	subtraction). No GUI side-effects —
 	deterministic and testable.
 - **`src/saxsabs/io`**: robust input parsing plus standard-format writers
 	(canSAS XML and NXcanSAS HDF5).
-- **`src/saxsabs/cli.py`**: seven headless subcommands: five focused utilities
+- **`src/saxsabs/cli.py`**: eight headless subcommands: six focused utilities
   (`norm-factor`, `parse-header`, `parse-external1d`, `estimate-k`,
-  `subtract-buffer`), the safety-first `bl19b2-abs2d` workflow, and the
-  explicit `bl19b2-abs2d-v1-legacy` migration entry. `estimate-k` and
-  `subtract-buffer` apply the intensity-state gates; the first three utilities
-  remain thin parsers/calculators. The legacy entry requires explicit monitor
-  and thickness semantics and never silently restores v1 defaults.
+  `subtract-buffer`, `subtract-fluorescence`), the safety-first `bl19b2-abs2d`
+  workflow, and the explicit `bl19b2-abs2d-v1-legacy` migration entry.
+  `estimate-k`, `subtract-buffer`, and `subtract-fluorescence` apply the
+  intensity-state gates; the first three utilities remain thin
+  parsers/calculators. The legacy entry requires explicit monitor and
+  thickness semantics and never silently restores v1 defaults.
 - **`src/saxsabs/constants.py`**: pluggable reference-standard registry
 	(SRM 3600, water, custom curves).
 - **`src/saxsabs/workbench_launcher.py`**: packaged launcher used by
@@ -99,6 +102,14 @@
   provenance.
   The Workbench calls the shared core `subtract_buffer`; if it is unavailable,
   formal subtraction fails closed with no weaker local fallback.
+- Fluorescence subtraction is opt-in and absolute-scale only. It is an additive
+  1-D term `I_corr = I_abs − β F(q)` applied after K, thickness, and optional
+  buffer. Methods are `constant`, `high_q_mean`, `high_q_median`, and
+  `measured_profile`. High-q estimation is valid only where elastic SAXS is
+  negligible in the stated window. The ledger token is `fluorescence`. Unknown
+  `u(F0)` or `u(β)` keeps combined uncertainty NaN. The kernel never clips
+  negative intensities. Detector-space NIST blank subtraction is unchanged:
+  a q-independent 1-D constant must not be written back onto raw counts.
 - The NIST 30 keV GUI export is a material-attenuation provenance JSON. It is
   invalidated whenever source/energy/preset/composition/density/porosity input
   changes. Nominal identity is inferred from the edited composition, not copied
@@ -139,9 +150,10 @@
   estimation, NIST 30 keV material core, Elam diagnostic calculator, 1D
   intensity ledger, signed-in-memory Workbench preflight, fixed-thickness
   enforcement, disabled legacy/resume controls, exact K-only/Kd/buffer gates,
-  absolute-buffer validation, provenance-aware scrollable μ UI, disabled Tab 3
-  raw mode, screen-aware startup, strict BL19B2 workflows, standard writers,
-  bilingual GUI, CLI, CI, and paper assets. K-only formal scaling requires both
+  absolute-buffer validation, optional absolute 1D fluorescence subtraction,
+  provenance-aware scrollable μ UI, disabled Tab 3 raw mode, screen-aware
+  startup, strict BL19B2 workflows, standard writers, bilingual GUI, CLI, CI,
+  and paper assets. K-only formal scaling requires both
   the inherited-thickness ledger entry and numeric/source provenance.
 - **Strict campaign ownership**: formal multi-folder and per-sample campaigns
   remain owned by the strict CLI/batch runner. The Workbench is an interactive

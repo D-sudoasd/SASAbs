@@ -7,6 +7,7 @@ from saxsabs.core.intensity_state import (
     assess_intensity_state,
     parse_correction_ledger,
     require_absolute_input_for_buffer_subtraction,
+    require_absolute_input_for_fluorescence_subtraction,
     require_relative_input_for_absolute_scaling,
     serialize_correction_ledger,
 )
@@ -212,3 +213,52 @@ def test_absolute_buffer_requires_unit_complete_ledger_and_no_prior_buffer():
     }
     with pytest.raises(ValueError, match="absolute buffer ledger is missing"):
         require_absolute_input_for_buffer_subtraction(guard_only)
+
+
+def test_fluorescence_aliases_are_canonical():
+    assert parse_correction_ledger("fluo,xrf") == ("fluorescence",)
+    assert parse_correction_ledger(["fluorescence_background"]) == ("fluorescence",)
+
+
+def test_absolute_fluorescence_requires_unit_complete_ledger_and_no_prior_fluorescence():
+    valid = {
+        "intensity_state": "absolute_cm^-1",
+        "intensity_unit": "1/cm",
+        "operator_provenance": {
+            "intensity_state": "absolute_cm^-1",
+            "corrections_applied": '["buffer","k","thickness"]',
+        },
+    }
+    assert require_absolute_input_for_fluorescence_subtraction(valid).is_absolute
+
+    relative = {
+        "i_col": "I_rel",
+        "operator_provenance": {"intensity_state": "relative"},
+    }
+    with pytest.raises(ValueError, match="absolute intensity"):
+        require_absolute_input_for_fluorescence_subtraction(relative)
+
+    missing_unit = {**valid, "intensity_unit": ""}
+    with pytest.raises(ValueError, match="intensity_unit"):
+        require_absolute_input_for_fluorescence_subtraction(missing_unit)
+
+    repeated = {
+        **valid,
+        "operator_provenance": {
+            "intensity_state": "absolute_cm^-1",
+            "corrections_applied": '["fluorescence","k","thickness"]',
+        },
+    }
+    with pytest.raises(ValueError, match="already fluorescence-subtracted"):
+        require_absolute_input_for_fluorescence_subtraction(repeated)
+
+    guard_only = {
+        "intensity_state": "absolute_cm^-1",
+        "intensity_unit": "1/cm",
+        "operator_provenance": {
+            "intensity_state": "absolute_cm^-1",
+            "do_not_repeat": '["k","thickness"]',
+        },
+    }
+    with pytest.raises(ValueError, match="absolute ledger is missing"):
+        require_absolute_input_for_fluorescence_subtraction(guard_only)
