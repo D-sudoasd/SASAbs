@@ -7227,6 +7227,7 @@ class SAXSAbsWorkbenchApp:
                 operator_fingerprint = ""
                 buffer_applied = False
                 fluorescence_applied = False
+                fluorescence_f0_applied = None
                 scale_factor = scale_factor_global if pipeline_mode == "scaled" else np.nan
                 thk_cm_used = fixed_thk_cm if pipeline_mode == "scaled" else np.nan
                 norm_s = np.nan
@@ -7428,8 +7429,7 @@ class SAXSAbsWorkbenchApp:
                                     result.err_subtracted,
                                 )
                             )
-                            fluorescence_info = dict(fluorescence_info)
-                            fluorescence_info["f0"] = result.f0
+                            fluorescence_f0_applied = result.f0
                             uncertainty_metadata = self.merge_uncertainty_metadata(
                                 uncertainty_metadata,
                                 self.fluorescence_uncertainty_metadata(
@@ -7521,9 +7521,13 @@ class SAXSAbsWorkbenchApp:
                     "FluorescenceApplied": fluorescence_applied,
                     "FluorescenceMethod": fluorescence_audit["method"] or "",
                     "FluorescenceF0": (
-                        fluorescence_audit["f0"]
-                        if fluorescence_audit["f0"] is not None
-                        else np.nan
+                        fluorescence_f0_applied
+                        if fluorescence_f0_applied is not None
+                        else (
+                            fluorescence_audit["f0"]
+                            if fluorescence_audit["f0"] is not None
+                            else np.nan
+                        )
                     ),
                     "FluorescenceBeta": (
                         fluorescence_audit["beta"]
